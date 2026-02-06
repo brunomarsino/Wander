@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wander — Voice Evolution Video</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ===== LANDING SCREEN ===== -->
+    <div class="screen" id="landingScreen">
+        <div class="landing-container">
+            <div class="logo">
+                <h1 class="logo-text">WANDER</h1>
+                <p class="logo-subtitle">A frictionless, multi-modal environment for the minus-one phase of ideation. Powered by Odyssey-2 Pro</p>
+            </div>
+            <p class="tap-hint">tap anywhere to enter</p>
+        </div>
+    </div>
+
+    <!-- ===== CONFIG SCREEN ===== -->
+    <div class="screen" id="configScreen" style="display:none;">
+        <div class="config-card">
+            <h2 class="config-title">Setup</h2>
+            <div class="config-input-group">
+                <label for="apiKey">Odyssey API Key</label>
+                <div class="input-with-button">
+                    <input type="password" id="apiKey" placeholder="Enter your Odyssey API Key">
+                    <button id="toggleKey" class="icon-btn">👁️</button>
+                </div>
+            </div>
+            <div class="config-input-group">
+                <label for="initialPrompt">Starting Scene</label>
+                <textarea id="initialPrompt" rows="3" placeholder="example: A black cat walking inside a midcentury home"></textarea>
+            </div>
+            <div class="config-option">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="speechRecognition" checked>
+                    <span>Enable Speech Recognition</span>
+                </label>
+            </div>
+            <div class="config-option">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="handGestures" checked>
+                    <span>Enable Hand Gesture Control</span>
+                </label>
+            </div>
+            <button id="startBtn" class="btn btn-start">
+                <span class="btn-icon">▶</span>
+                START
+            </button>
+            <p class="hint">Point and speak to shape a living AI video world</p>
+            <p class="hint-small">Powered by Odyssey</p>
+        </div>
+    </div>
+
+    <!-- ===== MAIN APP SCREEN ===== -->
+    <div class="screen" id="appScreen" style="display:none;">
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <span class="brand">wander</span>
+            </div>
+            <div class="top-bar-center">
+                <input type="text" class="project-title-input" id="projectTitle" value="Untitled Project" />
+            </div>
+            <div class="top-bar-right">
+                <button class="icon-btn-sm" id="sidebarToggle" title="Debug Info">☰</button>
+            </div>
+        </header>
+
+        <!-- Usage Instruction Banner -->
+        <div class="instruction-banner">
+            <span class="instruction-icon">👆</span>
+            <span class="instruction-text">Raise your hand, point with index finger for 1 second, then say "add [something]"</span>
+        </div>
+
+        <!-- Left: Online Users (placeholder) -->
+        <div class="online-users">
+            <div class="avatar" style="background: hsl(142 71% 45%);">Y</div>
+            <div class="avatar" style="background: hsl(221 100% 68%);">A</div>
+            <div class="avatar" style="background: hsl(25 95% 53%);">M</div>
+        </div>
+
+        <!-- Video Area (centered) -->
+        <main class="video-area">
+            <div class="video-card" id="videoCard">
+                <div class="video-card-status">
+                    <span class="status-badge" id="videoCardStatus">Connecting...</span>
+                    <button class="video-card-remove" id="removeVideoCard" title="Remove">✕</button>
+                </div>
+                <div class="video-display" id="videoDisplay">
+                    <video id="videoElement" autoplay playsinline></video>
+                    <canvas id="videoOverlayCanvas" class="video-overlay-canvas"></canvas>
+                    <div class="finger-cursor" id="fingerCursor"></div>
+                    <div class="click-marker" id="clickMarker"></div>
+                    <div class="video-overlay">
+                        <div class="overlay-indicator" id="generatingIndicator"></div>
+                    </div>
+                    <div class="gesture-indicator" id="gestureIndicator"></div>
+                    <!-- Voice prompt hint (after dwell-click) -->
+                    <div class="click-prompt-panel" id="clickPromptPanel" style="display:none;">
+                        <div class="click-prompt-header">
+                            <span>🎯 Speak now — what should happen here?</span>
+                        </div>
+                        <div class="click-prompt-info" id="clickPromptInfo"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Speech Pill (floating, centered) -->
+        <div class="speech-pill-wrapper">
+            <div class="speech-pill">
+                <button class="senses-button" id="sensesButton" title="Toggle Senses">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="3" cy="3" r="2" fill="currentColor"/>
+                        <circle cx="17" cy="3" r="2" fill="currentColor"/>
+                        <circle cx="3" cy="17" r="2" fill="currentColor"/>
+                        <path d="M10 3 L10 17 M3 10 L17 10" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                </button>
+                <div class="speech-pill-icon">
+                    <span id="speechStatus" class="mic-dot listening"></span>
+                    <span class="mic-label">🎤</span>
+                </div>
+                <input type="text" class="prompt-input" id="promptInput" placeholder="speak or type to start wandering..." />
+                <button class="send-button" id="sendButton" title="Send">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2 10 L18 2 L10 18 L8 11 L2 10Z" fill="currentColor"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Senses Dropdown Panel -->
+            <div class="senses-panel" id="sensesPanel" style="display: none;">
+                <div class="senses-panel-header">Three Senses</div>
+                <div class="sense-item">
+                    <span class="sense-icon">🗣️</span>
+                    <div class="sense-info">
+                        <div class="sense-name">Voice</div>
+                        <label class="sense-toggle">
+                            <input type="checkbox" id="senseVoice" checked />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="sense-item">
+                    <span class="sense-icon">😊</span>
+                    <div class="sense-info">
+                        <div class="sense-name">Vision (Emotion)</div>
+                        <label class="sense-toggle">
+                            <input type="checkbox" id="senseVision" checked />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="sense-item">
+                    <span class="sense-icon">👆</span>
+                    <div class="sense-info">
+                        <div class="sense-name">Gestures</div>
+                        <label class="sense-toggle">
+                            <input type="checkbox" id="senseGestures" checked />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== RIGHT SIDEBAR (debug info + camera) ===== -->
+    <div class="debug-sidebar" id="debugSidebar">
+        <div class="sidebar-header">
+            <span class="sidebar-title">Debug Info</span>
+            <button class="icon-btn-sm" id="sidebarClose">✕</button>
+        </div>
+        <div class="info-panel">
+            <div class="info-item">
+                <span class="info-label">Timer</span>
+                <span id="sessionTimer" class="info-value timer-value">150s</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Stream</span>
+                <span id="streamStatus" class="info-value">Not Started</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Interactions</span>
+                <span id="interactionCount" class="info-value">0</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Volume</span>
+                <span id="volumeValue" class="info-value">0%</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Pitch</span>
+                <span id="pitchValue" class="info-value">--</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Energy</span>
+                <span id="energyValue" class="info-value">0</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Emotion</span>
+                <span id="emotionValue" class="info-value">😐 neutral</span>
+            </div>
+        </div>
+        <div class="sidebar-section-title">Camera</div>
+        <div class="camera-preview">
+            <video id="handVideo" class="hand-video" autoplay playsinline></video>
+            <canvas id="faceCanvas" class="face-canvas"></canvas>
+            <div class="emotion-overlay" id="emotionOverlay">
+                <span class="emotion-emoji" id="emotionEmoji">😐</span>
+                <span class="emotion-label" id="emotionLabel">neutral</span>
+                <span class="emotion-percent" id="emotionPercent">0%</span>
+            </div>
+        </div>
+
+        <div class="sidebar-section-title">Gesture</div>
+        <div class="camera-preview">
+            <canvas id="handCanvas" class="hand-canvas"></canvas>
+        </div>
+    </div>
+
+    <!-- Config (git-ignored, contains API keys) -->
+    <script src="config.js"></script>
+
+    <!-- face-api.js for emotion detection -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+
+    <!-- MediaPipe Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    
+    <script type="module">
+        import { Odyssey } from 'https://esm.sh/@odysseyml/odyssey';
+        window.Odyssey = Odyssey;
+
+        // Sidebar toggle
+        const sidebar = document.getElementById('debugSidebar');
+        document.getElementById('sidebarToggle').addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+        });
+        document.getElementById('sidebarClose').addEventListener('click', () => {
+            sidebar.classList.remove('open');
+        });
+
+        // Load face-api.js models
+        async function loadFaceApiModels() {
+            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+            try {
+                console.log('📦 Loading face-api.js models from:', MODEL_URL);
+                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                console.log('✅ TinyFaceDetector loaded');
+                await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+                console.log('✅ FaceExpressionNet loaded');
+                console.log('✅ All face-api.js models loaded successfully');
+                window.faceApiLoaded = true;
+            } catch (err) {
+                console.error('❌ face-api.js models failed to load:', err);
+                window.faceApiLoaded = false;
+            }
+        }
+
+        // Wait for face-api.js library, MediaPipe, then load main app
+        const checkLibraries = setInterval(() => {
+            if (window.faceapi && window.Hands && window.Camera && window.drawConnectors) {
+                clearInterval(checkLibraries);
+                console.log('✅ face-api.js library loaded');
+                console.log('✅ MediaPipe loaded');
+                
+                loadFaceApiModels().then(() => {
+                    const script = document.createElement('script');
+                    script.src = 'app-main.js';
+                    document.body.appendChild(script);
+                });
+            }
+        }, 100);
+    </script>
+</body>
+</html>

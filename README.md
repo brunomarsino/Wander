@@ -42,9 +42,9 @@ To achieve this state of "stable flow," Wander removes the friction of tradition
 
 1. **Initialize:** Enter your Odyssey API Key in the startup panel.
 
-**2. Awaken Senses:** Click **"Start Wandering"** and allow Microphone and Camera access.
+2. **Awaken Senses:** Click **"Start Wandering"** and allow Microphone and Camera access.
 
-**3. Enter the Flow:** Once the senses are active, let your mind drift. Speak, gesture, and emote. The AI acts as your collaborative partner, reflecting your internal stream of thought into a real-time cinematic world.
+3. **Enter the Flow:** Once the senses are active, let your mind drift. Speak, gesture, and emote. The AI acts as your collaborative partner, reflecting your internal stream of thought into a real-time cinematic world.
 
 
 

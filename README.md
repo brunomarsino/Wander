@@ -77,7 +77,7 @@ Wander is only the beginning of a truly bio-integrated creative environment. Our
 
 
 * **Bruno Marsino:** System Architecture, **UI/UX Architecture, Cognitive Philosophy \& Prompt Strategy
-  Yves Chen:** System Architecture \& Odyssey Integration
+* **Yves Chen:** System Architecture \& Odyssey Integration
 * **Renzo Marsino: For providing guidance in the idea structure.**
 * **Ahmed Hesham: For assisting with the first vibe coding exercises.**
 

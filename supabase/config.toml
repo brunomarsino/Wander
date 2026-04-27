@@ -1,0 +1,2 @@
+[functions.openai-chat]
+verify_jwt = false

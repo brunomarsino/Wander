@@ -6,7 +6,7 @@ This app can run as a static frontend plus Supabase Edge Functions.
 
 - Frontend: GitHub Pages, served over HTTPS.
 - OpenAI: proxied through `supabase/functions/openai-chat` so the OpenAI key is not exposed in browser code.
-- Odyssey: private demo mode uses an in-browser key entry screen. The key is stored only in that browser's `localStorage`.
+- Odyssey: private demo mode uses a password gate backed by Supabase secrets. The browser receives the Odyssey key only after the password succeeds.
 
 ## Local Development
 
@@ -65,6 +65,8 @@ window.WANDER_SUPABASE_URL = 'https://hluhgxiqrwapunshvdqk.supabase.co';
 window.WANDER_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_UDO4s_9wzG9BKF9olybQjw_ubML-VwR';
 window.WANDER_API_BASE = 'https://hluhgxiqrwapunshvdqk.supabase.co/functions/v1';
 window.WANDER_OPENAI_PROXY_URL = '';
+window.WANDER_ODYSSEY_KEY_PROXY_URL = '';
+window.WANDER_ODYSSEY_MODEL = 'odyssey-2-max';
 window.OPENAI_API_KEY = '';
 window.ODYSSEY_API_KEY = '';
 window.WANDER_ALLOW_ODYSSEY_KEY_PROMPT = true;
@@ -74,14 +76,14 @@ Do not put real OpenAI or Odyssey keys in `config.public.js`.
 
 ## Private Odyssey Demo Flow
 
-When no Odyssey key is configured locally, the app shows a simple start screen:
+When no Odyssey key is configured locally, the app shows a simple demo access screen:
 
-1. Paste any valid Odyssey API key.
+1. Enter the demo password.
 2. Click `Start`.
-3. The key is saved to that browser's `localStorage`.
-4. Stream cards can then connect directly through the Odyssey browser SDK.
+3. Supabase returns the Odyssey key and active model to that browser.
+4. Stream cards connect directly through the Odyssey browser SDK using Odyssey-2 Max.
 
-This is acceptable for a controlled private demo. It is not a fully public secret-hiding strategy because the Odyssey SDK still runs in the browser.
+This is acceptable for a controlled private demo. It is not a fully public secret-hiding strategy because the Odyssey SDK still receives a browser-side key after password unlock.
 
 ## GitHub Pages
 

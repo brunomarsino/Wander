@@ -1,2 +1,5 @@
 [functions.openai-chat]
 verify_jwt = false
+
+[functions.odyssey-demo-key]
+verify_jwt = false

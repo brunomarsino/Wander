@@ -26,7 +26,7 @@ These world models have a great understanding on our environment, but not so muc
 
 
 
-To achieve this state of "stable flow," Wander removes the friction of traditional interfaces and replaces them with a more organic connection to **Odyssey-2 Pro / Odyssey default**:
+To achieve this state of "stable flow," Wander removes the friction of traditional interfaces and replaces them with a more organic connection to **Odyssey-2 Max / Odyssey default**:
 
 
 
@@ -66,7 +66,7 @@ Wander is only the beginning of a truly bio-integrated creative environment. Our
 
 
 
-* **Model:** Odyssey-2 Pro / Odyssey default (Real-time video generation)
+* **Model:** Odyssey-2 Max / Odyssey default (Real-time video generation)
 * **Stack:** React, Tailwind CSS, and Framer Motion.
 * **Sensing Engine:** Web Speech API, Vision Sensing, and Coordinate-to-Prompt Translation.
 

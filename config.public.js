@@ -3,6 +3,8 @@ window.WANDER_SUPABASE_URL = 'https://hluhgxiqrwapunshvdqk.supabase.co';
 window.WANDER_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_UDO4s_9wzG9BKF9olybQjw_ubML-VwR';
 window.WANDER_API_BASE = 'https://hluhgxiqrwapunshvdqk.supabase.co/functions/v1';
 window.WANDER_OPENAI_PROXY_URL = '';
+window.WANDER_ODYSSEY_KEY_PROXY_URL = '';
+window.WANDER_ODYSSEY_MODEL = 'odyssey-2-max';
 
 // Keep secrets out of this file. Use local config.js for localhost-only private keys.
 window.OPENAI_API_KEY = '';

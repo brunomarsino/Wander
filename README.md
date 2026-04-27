@@ -26,7 +26,7 @@ These world models have a great understanding on our environment, but not so muc
 
 
 
-To achieve this state of "stable flow," Wander removes the friction of traditional interfaces and replaces them with a more organic connection to **Odyssey-2 Max / Odyssey default**:
+To achieve this state of "stable flow," Wander removes the friction of traditional interfaces and replaces them with a more organic connection to **Odyssey's real-time world model API**:
 
 
 
@@ -40,7 +40,7 @@ To achieve this state of "stable flow," Wander removes the friction of tradition
 
 
 
-1. **Initialize:** Enter your Odyssey API Key in the startup panel.
+1. **Initialize:** Enter the private demo password, or use a local-only Odyssey API key during development.
 
 2. **Awaken Senses:** Click **"Start Wandering"** and allow Microphone and Camera access.
 
@@ -66,7 +66,7 @@ Wander is only the beginning of a truly bio-integrated creative environment. Our
 
 
 
-* **Model:** Odyssey-2 Max / Odyssey default (Real-time video generation)
+* **Model:** Odyssey default streaming model, with Max access controlled by the Odyssey account/API key.
 * **Stack:** React, Tailwind CSS, and Framer Motion.
 * **Sensing Engine:** Web Speech API, Vision Sensing, and Coordinate-to-Prompt Translation.
 

@@ -1,3 +1,4 @@
+import { Odyssey, credentialsToDict } from "npm:@odysseyml/odyssey@1.3.0";
 import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
 
 function isAllowedOrigin(req: Request) {
@@ -27,13 +28,12 @@ Deno.serve(async (req) => {
 
   const expectedPassword = Deno.env.get("DEMO_ACCESS_PASSWORD") || "";
   const odysseyApiKey = Deno.env.get("ODYSSEY_API_KEY") || "";
-  const model = Deno.env.get("ODYSSEY_MODEL") || "odyssey-2-max";
 
   if (!expectedPassword || !odysseyApiKey) {
     return jsonResponse({ error: "Demo access is not configured" }, { status: 500 });
   }
 
-  let body: { password?: string };
+  let body: { password?: string; validateOnly?: boolean };
   try {
     body = await req.json();
   } catch (_) {
@@ -44,8 +44,17 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Incorrect demo password" }, { status: 401 });
   }
 
-  return jsonResponse({
-    odysseyApiKey,
-    model,
-  });
+  if (body.validateOnly) {
+    return jsonResponse({ ok: true });
+  }
+
+  try {
+    const server = new Odyssey({ apiKey: odysseyApiKey });
+    const credentials = await server.createClientCredentials();
+    return jsonResponse({ credentials: credentialsToDict(credentials) });
+  } catch (error) {
+    return jsonResponse({
+      error: error instanceof Error ? error.message : "Failed to create Odyssey credentials",
+    }, { status: 502 });
+  }
 });

@@ -6,7 +6,7 @@ This app can run as a static frontend plus Supabase Edge Functions.
 
 - Frontend: GitHub Pages, served over HTTPS.
 - OpenAI: proxied through `supabase/functions/openai-chat` so the OpenAI key is not exposed in browser code.
-- Odyssey: private demo mode uses a password gate backed by Supabase secrets. The browser receives the Odyssey key only after the password succeeds.
+- Odyssey: private demo mode uses a password gate backed by Supabase secrets. The browser receives short-lived Odyssey client credentials; the Odyssey API key stays server-side.
 
 ## Local Development
 
@@ -65,8 +65,7 @@ window.WANDER_SUPABASE_URL = 'https://hluhgxiqrwapunshvdqk.supabase.co';
 window.WANDER_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_UDO4s_9wzG9BKF9olybQjw_ubML-VwR';
 window.WANDER_API_BASE = 'https://hluhgxiqrwapunshvdqk.supabase.co/functions/v1';
 window.WANDER_OPENAI_PROXY_URL = '';
-window.WANDER_ODYSSEY_KEY_PROXY_URL = '';
-window.WANDER_ODYSSEY_MODEL = 'odyssey-2-max';
+window.WANDER_ODYSSEY_CREDENTIALS_URL = '';
 window.OPENAI_API_KEY = '';
 window.ODYSSEY_API_KEY = '';
 window.WANDER_ALLOW_ODYSSEY_KEY_PROMPT = true;
@@ -80,10 +79,12 @@ When no Odyssey key is configured locally, the app shows a simple demo access sc
 
 1. Enter the demo password.
 2. Click `Start`.
-3. Supabase returns the Odyssey key and active model to that browser.
-4. Stream cards connect directly through the Odyssey browser SDK using Odyssey-2 Max.
+3. Supabase validates the password and mints short-lived Odyssey client credentials with `createClientCredentials()`.
+4. Stream cards connect through the Odyssey browser SDK using `connectWithCredentials()`.
 
-This is acceptable for a controlled private demo. It is not a fully public secret-hiding strategy because the Odyssey SDK still receives a browser-side key after password unlock.
+This keeps the Odyssey API key out of browser code. The short-lived credentials are single-session and expire quickly; demo access still depends on keeping the password private.
+
+Odyssey-2 Max access is controlled by the Odyssey account/API key. The current JavaScript SDK `startStream()` options do not document a `model` or `quality` field, so the app intentionally lets Odyssey choose the account's default streaming model instead of sending unsupported fields.
 
 ## GitHub Pages
 

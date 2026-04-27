@@ -102,13 +102,13 @@
         </div>
     </div>
 
-    <!-- ===== PRIVATE DEMO ODYSSEY KEY START ===== -->
+    <!-- ===== PRIVATE DEMO ODYSSEY CREDENTIALS START ===== -->
     <div class="odyssey-key-gate" id="odysseyKeyGate" hidden>
         <div class="odyssey-key-card">
             <div class="odyssey-key-kicker">Private demo</div>
             <h1 class="odyssey-key-title">Connect Odyssey</h1>
             <p class="odyssey-key-copy">
-                Enter the demo password to unlock Odyssey-2 Max for this browser. The stream key is provided by the demo backend.
+                Enter the demo password to unlock Odyssey for this browser. The backend keeps the API key private and issues short-lived stream credentials.
             </p>
             <label class="odyssey-key-label" for="odysseyKeyInput">Demo password</label>
             <div class="odyssey-key-row">
@@ -241,8 +241,9 @@
     <script src="config.js"></script>
 
     <script type="module">
-        import { Odyssey } from 'https://esm.sh/@odysseyml/odyssey';
+        import { Odyssey, credentialsFromDict } from 'https://esm.sh/@odysseyml/odyssey';
         window.Odyssey = Odyssey;
+        window.OdysseyCredentialsFromDict = credentialsFromDict;
         window.faceApiLoaded = false;
 
         // Register service worker only outside localhost.

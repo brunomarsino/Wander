@@ -6376,9 +6376,7 @@ async function restartStreamCard(cardState) {
 
     await client.startStream({
         prompt: resumePrompt,
-        portrait: false,
-        model: 'odyssey-2-pro',
-        quality: 'high'
+        portrait: false
     });
 
     cardState.isConnected = true;
@@ -6740,9 +6738,7 @@ async function createStreamCardFromPrompt(rawPrompt, options = {}) {
 
         await client.startStream({
             prompt: preparedPrompt,
-            portrait: false,
-            model: 'odyssey-2-pro',
-            quality: 'high'
+            portrait: false
         });
         if (!isCardAlive()) {
             await cleanupDetachedStream();

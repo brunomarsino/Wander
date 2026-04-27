@@ -1,0 +1,8 @@
+node_modules/
+.tools/
+.vscode/
+npm-debug.log*
+config.js
+.env
+.env.*
+supabase/.temp/

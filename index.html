@@ -1,130 +1,72 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wander — Voice Evolution Video</title>
+    <title>Wander &mdash; Voice Evolution Video</title>
+    <link rel="icon" href="data:,">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- ===== LANDING SCREEN ===== -->
-    <div class="screen" id="landingScreen">
-        <div class="landing-container">
-            <div class="logo">
-                <h1 class="logo-text">WANDER</h1>
-                <p class="logo-subtitle">A frictionless, multi-modal environment for the minus-one phase of ideation. Powered by Odyssey-2 Pro</p>
-            </div>
-            <p class="tap-hint">tap anywhere to enter</p>
-        </div>
-    </div>
-
-    <!-- ===== CONFIG SCREEN ===== -->
-    <div class="screen" id="configScreen" style="display:none;">
-        <div class="config-card">
-            <h2 class="config-title">Setup</h2>
-            <div class="config-input-group">
-                <label for="apiKey">Odyssey API Key</label>
-                <div class="input-with-button">
-                    <input type="password" id="apiKey" placeholder="Enter your Odyssey API Key">
-                    <button id="toggleKey" class="icon-btn">👁️</button>
-                </div>
-            </div>
-            <div class="config-input-group">
-                <label for="initialPrompt">Starting Scene</label>
-                <textarea id="initialPrompt" rows="3" placeholder="example: A black cat walking inside a midcentury home"></textarea>
-            </div>
-            <div class="config-option">
-                <label class="checkbox-label">
-                    <input type="checkbox" id="speechRecognition" checked>
-                    <span>Enable Speech Recognition</span>
-                </label>
-            </div>
-            <div class="config-option">
-                <label class="checkbox-label">
-                    <input type="checkbox" id="handGestures" checked>
-                    <span>Enable Hand Gesture Control</span>
-                </label>
-            </div>
-            <button id="startBtn" class="btn btn-start">
-                <span class="btn-icon">▶</span>
-                START
-            </button>
-            <p class="hint">Point and speak to shape a living AI video world</p>
-            <p class="hint-small">Powered by Odyssey</p>
-        </div>
-    </div>
-
     <!-- ===== MAIN APP SCREEN ===== -->
-    <div class="screen" id="appScreen" style="display:none;">
+    <div class="screen" id="appScreen">
         <!-- Top Bar -->
         <header class="top-bar">
             <div class="top-bar-left">
                 <span class="brand">wander</span>
             </div>
             <div class="top-bar-center">
-                <input type="text" class="project-title-input" id="projectTitle" value="Untitled Project" />
+                <div class="project-title-wrap">
+                    <input type="text" class="project-title-input" id="projectTitle" value="untitled project" />
+                    <span class="project-title-pen" aria-hidden="true">&#9998;</span>
+                </div>
             </div>
             <div class="top-bar-right">
-                <button class="icon-btn-sm" id="sidebarToggle" title="Debug Info">☰</button>
+                <button class="icon-btn-sm" id="newProjectTopBtn" title="New project">+</button>
+                <button class="icon-btn-sm" id="sidebarToggle" title="Workspace">&#9776;</button>
             </div>
         </header>
 
         <!-- Usage Instruction Banner -->
         <div class="instruction-banner">
-            <span class="instruction-icon">👆</span>
+            <span class="instruction-icon">&#128070;</span>
             <span class="instruction-text">Raise your hand, point with index finger for 1 second, then say "add [something]"</span>
-        </div>
-
-        <!-- Left: Online Users (placeholder) -->
-        <div class="online-users">
-            <div class="avatar" style="background: hsl(142 71% 45%);">Y</div>
-            <div class="avatar" style="background: hsl(221 100% 68%);">A</div>
-            <div class="avatar" style="background: hsl(25 95% 53%);">M</div>
+            <button class="instruction-close" id="instructionCloseBtn" type="button" aria-label="Dismiss instruction banner">&times;</button>
         </div>
 
         <!-- Video Area (centered) -->
-        <main class="video-area">
-            <div class="video-card" id="videoCard">
-                <div class="video-card-status">
-                    <span class="status-badge" id="videoCardStatus">Connecting...</span>
-                    <button class="video-card-remove" id="removeVideoCard" title="Remove">✕</button>
-                </div>
-                <div class="video-display" id="videoDisplay">
-                    <video id="videoElement" autoplay playsinline></video>
-                    <canvas id="videoOverlayCanvas" class="video-overlay-canvas"></canvas>
-                    <div class="finger-cursor" id="fingerCursor"></div>
-                    <div class="click-marker" id="clickMarker"></div>
-                    <div class="video-overlay">
-                        <div class="overlay-indicator" id="generatingIndicator"></div>
-                    </div>
-                    <div class="gesture-indicator" id="gestureIndicator"></div>
-                    <!-- Voice prompt hint (after dwell-click) -->
-                    <div class="click-prompt-panel" id="clickPromptPanel" style="display:none;">
-                        <div class="click-prompt-header">
-                            <span>🎯 Speak now — what should happen here?</span>
-                        </div>
-                        <div class="click-prompt-info" id="clickPromptInfo"></div>
-                    </div>
-                </div>
-            </div>
+        <main class="video-area" id="videoArea">
+            <div class="video-canvas" id="videoCanvas"></div>
         </main>
 
         <!-- Bottom Speech Pill (floating, centered) -->
         <div class="speech-pill-wrapper">
             <div class="speech-pill">
                 <button class="senses-button" id="sensesButton" title="Toggle Senses">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="3" cy="3" r="2" fill="currentColor"/>
-                        <circle cx="17" cy="3" r="2" fill="currentColor"/>
-                        <circle cx="3" cy="17" r="2" fill="currentColor"/>
-                        <path d="M10 3 L10 17 M3 10 L17 10" stroke="currentColor" stroke-width="1.5"/>
+                    <svg class="senses-triangle-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M10 3.4L4.3 14.8H15.7L10 3.4Z" stroke="#3F4348" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="10" cy="3.4" r="2.2" fill="#3F4348"/>
+                        <circle cx="4.3" cy="14.8" r="2.2" fill="#3F4348"/>
+                        <circle cx="15.7" cy="14.8" r="2.2" fill="#3F4348"/>
                     </svg>
                 </button>
                 <div class="speech-pill-icon">
                     <span id="speechStatus" class="mic-dot listening"></span>
-                    <span class="mic-label">🎤</span>
                 </div>
-                <input type="text" class="prompt-input" id="promptInput" placeholder="speak or type to start wandering..." />
+                <div class="speech-pill-main">
+                    <input type="text" class="prompt-input" id="promptInput" placeholder="speak or type to start wandering..." />
+                    <div class="speech-feedback" aria-live="polite">
+                        <div class="speech-feedback-row">
+                            <span class="speech-feedback-label">Heard</span>
+                            <span id="speechHeardText" class="speech-feedback-text">--</span>
+                        </div>
+                        <div class="speech-feedback-row">
+                            <span class="speech-feedback-label">Applied</span>
+                            <span id="speechAppliedText" class="speech-feedback-text">--</span>
+                            <span id="promptModifierIcons" class="prompt-modifier-icons" aria-label="Active prompt modifiers"></span>
+                        </div>
+                    </div>
+                </div>
                 <button class="send-button" id="sendButton" title="Send">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M2 10 L18 2 L10 18 L8 11 L2 10Z" fill="currentColor"/>
@@ -134,149 +76,208 @@
             
             <!-- Senses Dropdown Panel -->
             <div class="senses-panel" id="sensesPanel" style="display: none;">
-                <div class="senses-panel-header">Three Senses</div>
-                <div class="sense-item">
-                    <span class="sense-icon">🗣️</span>
-                    <div class="sense-info">
-                        <div class="sense-name">Voice</div>
-                        <label class="sense-toggle">
-                            <input type="checkbox" id="senseVoice" checked />
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
+                <div class="senses-panel-header">Senses</div>
+
+                <div class="sense-item sense-item-vision">
+                    <label class="sense-icon-btn" data-tooltip="Vision">
+                        <input type="checkbox" id="senseVision" checked />
+                        <span class="sense-icon">&#128065;</span>
+                    </label>
                 </div>
-                <div class="sense-item">
-                    <span class="sense-icon">😊</span>
-                    <div class="sense-info">
-                        <div class="sense-name">Vision (Emotion)</div>
-                        <label class="sense-toggle">
-                            <input type="checkbox" id="senseVision" checked />
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
+
+                <div class="sense-item sense-item-voice">
+                    <label class="sense-icon-btn" data-tooltip="Voice">
+                        <input type="checkbox" id="senseVoice" checked />
+                        <span class="sense-icon">&#128068;</span>
+                    </label>
                 </div>
-                <div class="sense-item">
-                    <span class="sense-icon">👆</span>
-                    <div class="sense-info">
-                        <div class="sense-name">Gestures</div>
-                        <label class="sense-toggle">
-                            <input type="checkbox" id="senseGestures" checked />
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
+
+                <div class="sense-item sense-item-gestures">
+                    <label class="sense-icon-btn" data-tooltip="Gestures">
+                        <input type="checkbox" id="senseGestures" checked />
+                        <span class="sense-icon">&#9995;</span>
+                    </label>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ===== RIGHT SIDEBAR (debug info + camera) ===== -->
+    <!-- ===== PRIVATE DEMO ODYSSEY KEY START ===== -->
+    <div class="odyssey-key-gate" id="odysseyKeyGate" hidden>
+        <div class="odyssey-key-card">
+            <div class="odyssey-key-kicker">Private demo</div>
+            <h1 class="odyssey-key-title">Connect Odyssey</h1>
+            <p class="odyssey-key-copy">
+                Enter an Odyssey API key for this browser. The key is stored locally on this device and is not committed to the app.
+            </p>
+            <label class="odyssey-key-label" for="odysseyKeyInput">Odyssey API key</label>
+            <div class="odyssey-key-row">
+                <input id="odysseyKeyInput" class="odyssey-key-input" type="password" autocomplete="off" spellcheck="false" placeholder="ody_..." />
+                <button id="odysseyKeyStartBtn" class="odyssey-key-start" type="button">Start</button>
+            </div>
+            <div id="odysseyKeyGateError" class="odyssey-key-error" role="status" aria-live="polite"></div>
+        </div>
+    </div>
+
+    <!-- ===== RIGHT SIDEBAR ===== -->
     <div class="debug-sidebar" id="debugSidebar">
         <div class="sidebar-header">
-            <span class="sidebar-title">Debug Info</span>
-            <button class="icon-btn-sm" id="sidebarClose">✕</button>
-        </div>
-        <div class="info-panel">
-            <div class="info-item">
-                <span class="info-label">Timer</span>
-                <span id="sessionTimer" class="info-value timer-value">150s</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Stream</span>
-                <span id="streamStatus" class="info-value">Not Started</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Interactions</span>
-                <span id="interactionCount" class="info-value">0</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Volume</span>
-                <span id="volumeValue" class="info-value">0%</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Pitch</span>
-                <span id="pitchValue" class="info-value">--</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Energy</span>
-                <span id="energyValue" class="info-value">0</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Emotion</span>
-                <span id="emotionValue" class="info-value">😐 neutral</span>
-            </div>
-        </div>
-        <div class="sidebar-section-title">Camera</div>
-        <div class="camera-preview">
-            <video id="handVideo" class="hand-video" autoplay playsinline></video>
-            <canvas id="faceCanvas" class="face-canvas"></canvas>
-            <div class="emotion-overlay" id="emotionOverlay">
-                <span class="emotion-emoji" id="emotionEmoji">😐</span>
-                <span class="emotion-label" id="emotionLabel">neutral</span>
-                <span class="emotion-percent" id="emotionPercent">0%</span>
-            </div>
+            <span class="sidebar-title">Workspace</span>
+            <button class="icon-btn-sm sidebar-pin-btn" id="sidebarPin" title="Pin workspace panel" aria-pressed="false" aria-label="Pin workspace panel">
+                <svg class="pin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 3H16V6L14.5 8.5V13L12 15.5L9.5 13V8.5L8 6V3Z" fill="currentColor"/>
+                    <path d="M12 15.5V21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+            </button>
         </div>
 
-        <div class="sidebar-section-title">Gesture</div>
-        <div class="camera-preview">
-            <canvas id="handCanvas" class="hand-canvas"></canvas>
+        <div class="sidebar-body">
+            <section class="sidebar-pane concepts-pane">
+                <div class="concepts-header">
+                    <h3 class="sidebar-section-title">Concepts</h3>
+                    <div class="concepts-actions">
+                        <button class="icon-btn-sm concepts-plus-btn" id="newProjectConceptBtn" type="button" title="New project">+</button>
+                    </div>
+                </div>
+                <div class="concepts-grid" id="conceptsGrid">
+                    <div class="concept-empty">No concepts yet</div>
+                </div>
+            </section>
+
+            <section class="sidebar-pane senses-pane">
+                <h3 class="sidebar-section-title">Senses Status</h3>
+
+                <div class="audio-status-card">
+                    <div class="audio-status-grid">
+                        <div class="audio-status-row">
+                            <span class="info-label">Volume</span>
+                            <span id="volumeValue" class="info-value">0%</span>
+                        </div>
+                        <div class="audio-status-row">
+                            <span class="info-label">Pitch</span>
+                            <span id="pitchValue" class="info-value">--</span>
+                        </div>
+                        <div class="audio-status-row">
+                            <span class="info-label">Energy</span>
+                            <span id="energyValue" class="info-value">0</span>
+                        </div>
+                        <div class="audio-status-row">
+                            <span class="info-label">Emotion</span>
+                            <span id="emotionValue" class="info-value">neutral</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sense-preview-grid">
+                    <div class="sense-preview-card">
+                        <div class="sense-preview-title">Vision</div>
+                        <div class="camera-preview">
+                            <video id="handVideo" class="hand-video" autoplay playsinline></video>
+                            <canvas id="faceCanvas" class="face-canvas"></canvas>
+                            <div class="emotion-overlay" id="emotionOverlay">
+                                <span class="emotion-emoji" id="emotionEmoji">:|</span>
+                                <span class="emotion-label" id="emotionLabel">neutral</span>
+                                <span class="emotion-percent" id="emotionPercent">0%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sense-preview-card">
+                        <div class="sense-preview-title">Gestures</div>
+                        <div class="camera-preview">
+                            <canvas id="handCanvas" class="hand-canvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="sidebar-pane options-pane">
+                <h3 class="sidebar-section-title">Options</h3>
+                <div class="options-card">
+                    <label class="option-toggle-row" for="optionPromptBarToggle">
+                        <div class="option-toggle-copy">
+                            <span class="option-toggle-title">Prompt Bar</span>
+                            <span class="option-toggle-desc">Show bottom prompt controls</span>
+                        </div>
+                        <span class="option-toggle-control">
+                            <input type="checkbox" id="optionPromptBarToggle" checked />
+                            <span class="option-toggle-track">
+                                <span class="option-toggle-thumb"></span>
+                            </span>
+                        </span>
+                    </label>
+
+                    <label class="option-toggle-row" for="optionThemeToggle">
+                        <div class="option-toggle-copy">
+                            <span class="option-toggle-title">Dark Mode</span>
+                            <span class="option-toggle-desc">Switch between light and dark UI</span>
+                        </div>
+                        <span class="option-toggle-control">
+                            <input type="checkbox" id="optionThemeToggle" />
+                            <span class="option-toggle-track">
+                                <span class="option-toggle-thumb"></span>
+                            </span>
+                        </span>
+                    </label>
+                </div>
+            </section>
         </div>
     </div>
 
-    <!-- Config (git-ignored, contains API keys) -->
+    <!-- Liquid glass wobble filter (shared) -->
+    <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+        <filter id="glass-wobble">
+            <feTurbulence type="fractalNoise" baseFrequency="0.0048" numOctaves="2" seed="2" result="noise">
+                <animate attributeName="baseFrequency" dur="12s" values="0.0045;0.0062;0.0045" repeatCount="indefinite"></animate>
+            </feTurbulence>
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.6" xChannelSelector="R" yChannelSelector="G">
+                <animate attributeName="scale" dur="10.5s" values="1.9;3.1;1.9" repeatCount="indefinite"></animate>
+            </feDisplacementMap>
+        </filter>
+    </svg>
+
+    <!-- Public config is safe to commit. Optional config.js is git-ignored for local/private keys. -->
+    <script src="config.public.js"></script>
     <script src="config.js"></script>
 
-    <!-- face-api.js for emotion detection -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
-
-    <!-- MediaPipe Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-    
     <script type="module">
         import { Odyssey } from 'https://esm.sh/@odysseyml/odyssey';
         window.Odyssey = Odyssey;
+        window.faceApiLoaded = false;
 
-        // Sidebar toggle
-        const sidebar = document.getElementById('debugSidebar');
-        document.getElementById('sidebarToggle').addEventListener('click', () => {
-            sidebar.classList.toggle('open');
-        });
-        document.getElementById('sidebarClose').addEventListener('click', () => {
-            sidebar.classList.remove('open');
-        });
+        // Register service worker only outside localhost.
+        // On localhost we disable it to avoid stale JS/CSS during rapid iteration.
+        if ('serviceWorker' in navigator) {
+            const localHosts = new Set(['localhost', '127.0.0.1', '::1']);
+            const isLocalhost = localHosts.has(window.location.hostname);
 
-        // Load face-api.js models
-        async function loadFaceApiModels() {
-            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
-            try {
-                console.log('📦 Loading face-api.js models from:', MODEL_URL);
-                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-                console.log('✅ TinyFaceDetector loaded');
-                await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
-                console.log('✅ FaceExpressionNet loaded');
-                console.log('✅ All face-api.js models loaded successfully');
-                window.faceApiLoaded = true;
-            } catch (err) {
-                console.error('❌ face-api.js models failed to load:', err);
-                window.faceApiLoaded = false;
+            if (isLocalhost) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.getRegistrations()
+                        .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
+                        .catch(() => {});
+
+                    if ('caches' in window) {
+                        caches.keys()
+                            .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+                            .catch(() => {});
+                    }
+                });
+            } else {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('./sw.js').catch((err) => {
+                        console.warn('Service worker registration failed:', err);
+                    });
+                });
             }
         }
 
-        // Wait for face-api.js library, MediaPipe, then load main app
-        const checkLibraries = setInterval(() => {
-            if (window.faceapi && window.Hands && window.Camera && window.drawConnectors) {
-                clearInterval(checkLibraries);
-                console.log('✅ face-api.js library loaded');
-                console.log('✅ MediaPipe loaded');
-                
-                loadFaceApiModels().then(() => {
-                    const script = document.createElement('script');
-                    script.src = 'app-main.js';
-                    document.body.appendChild(script);
-                });
-            }
-        }, 100);
+        // Load main app immediately; vision/gesture libs are lazy-loaded in app-main.js.
+        const script = document.createElement('script');
+        script.src = 'app-main.js';
+        document.body.appendChild(script);
     </script>
 </body>
 </html>
+
+

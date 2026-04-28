@@ -1,5 +1,5 @@
-const SHELL_CACHE = 'wander-shell-v6';
-const RUNTIME_CACHE = 'wander-runtime-v6';
+const SHELL_CACHE = 'wander-shell-v7';
+const RUNTIME_CACHE = 'wander-runtime-v7';
 
 const SHELL_ASSETS = [
     './',

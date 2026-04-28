@@ -261,8 +261,12 @@ const CHIP_MIN_TEXT_LENGTH = 1;
 const UI_MINIMAL_MODE_STORAGE_KEY = 'wander_ui_minimal_mode';
 const PROMPT_BAR_VISIBLE_STORAGE_KEY = 'wander_prompt_bar_visible';
 const THEME_MODE_STORAGE_KEY = 'wander_theme_mode';
+const WELCOME_SEEN_SESSION_STORAGE_KEY = 'wander_welcome_seen_session';
 const INSTRUCTION_BANNER_AUTO_HIDE_MS = 2800;
 const INSTRUCTION_BANNER_HIDE_TRANSITION_MS = 220;
+const CARD_STATUS_HISTORY_LIMIT = 5;
+const STREAM_TELEMETRY_MAX_EVENTS = 80;
+const REPLAY_CROSSFADE_MS = 280;
 
 // Auto-evolution
 let autoEvolutionInterval;
@@ -305,6 +309,9 @@ const odysseyKeyGateEl = document.getElementById('odysseyKeyGate');
 const odysseyKeyInputEl = document.getElementById('odysseyKeyInput');
 const odysseyKeyStartBtn = document.getElementById('odysseyKeyStartBtn');
 const odysseyKeyGateErrorEl = document.getElementById('odysseyKeyGateError');
+const wanderWelcomeModalEl = document.getElementById('wanderWelcomeModal');
+const wanderWelcomeCloseBtn = document.getElementById('wanderWelcomeCloseBtn');
+const optionWelcomeReplayBtn = document.getElementById('optionWelcomeReplayBtn');
 const instructionBannerEl = document.querySelector('.instruction-banner');
 const instructionCloseBtn = document.getElementById('instructionCloseBtn');
 const conceptsGridEl = document.getElementById('conceptsGrid');
@@ -377,6 +384,37 @@ function debugLog(...args) {
     if (DEBUG_LOGS) {
         console.log(...args);
     }
+}
+
+const streamTelemetry = [];
+if (typeof window !== 'undefined') {
+    window.wanderStreamTelemetry = streamTelemetry;
+}
+
+function recordStreamTelemetry(eventName, details = {}) {
+    const safeDetails = {};
+    Object.entries(details || {}).forEach(([key, value]) => {
+        if (/token|key|password|credential/i.test(key)) return;
+        if (typeof value === 'string') {
+            safeDetails[key] = value.length > 240 ? `${value.slice(0, 240)}...` : value;
+            return;
+        }
+        if (typeof value === 'number' || typeof value === 'boolean' || value === null) {
+            safeDetails[key] = value;
+        }
+    });
+
+    const entry = {
+        ts: Date.now(),
+        event: String(eventName || 'event'),
+        ...safeDetails
+    };
+    streamTelemetry.push(entry);
+    if (streamTelemetry.length > STREAM_TELEMETRY_MAX_EVENTS) {
+        streamTelemetry.splice(0, streamTelemetry.length - STREAM_TELEMETRY_MAX_EVENTS);
+    }
+    debugLog('[stream]', entry.event, safeDetails);
+    return entry;
 }
 
 function detectRuntimeProfile() {
@@ -837,6 +875,44 @@ function markInstructionBannerInteractionComplete() {
     if (!isMinimalUiMode) return;
     instructionBannerHiddenForSession = true;
     setInstructionBannerHidden(true);
+}
+
+function hasSeenWelcomeThisSession() {
+    try {
+        return sessionStorage.getItem(WELCOME_SEEN_SESSION_STORAGE_KEY) === 'true';
+    } catch (_) {
+        return false;
+    }
+}
+
+function markWelcomeSeenThisSession() {
+    try {
+        sessionStorage.setItem(WELCOME_SEEN_SESSION_STORAGE_KEY, 'true');
+    } catch (_) {
+        // no-op
+    }
+}
+
+function showWelcomeModal(options = {}) {
+    if (!wanderWelcomeModalEl) return;
+    const force = options.force === true;
+    if (!force && hasSeenWelcomeThisSession()) return;
+
+    wanderWelcomeModalEl.hidden = false;
+    document.body?.classList.add('welcome-modal-open');
+    if (!force) {
+        markWelcomeSeenThisSession();
+    }
+    setTimeout(() => {
+        wanderWelcomeCloseBtn?.focus?.();
+    }, 0);
+}
+
+function hideWelcomeModal() {
+    if (!wanderWelcomeModalEl) return;
+    wanderWelcomeModalEl.hidden = true;
+    document.body?.classList.remove('welcome-modal-open');
+    markWelcomeSeenThisSession();
 }
 
 function clampNumber(value, min, max) {
@@ -1810,6 +1886,7 @@ async function activateProject(projectId, options = {}) {
 
     projectSwitchInFlight = true;
     try {
+        recordStreamTelemetry('project_switch_start', { projectId });
         cancelScheduledProjectAutosave();
         projectAutosaveQueued = false;
         projectAutosaveNeedsRender = false;
@@ -1838,6 +1915,7 @@ async function activateProject(projectId, options = {}) {
 
         renderConceptCards();
         updateSaveProjectButtonState();
+        recordStreamTelemetry('project_switch_success', { projectId });
         return true;
     } finally {
         projectSwitchInFlight = false;
@@ -2088,6 +2166,7 @@ function hasOdysseyConnectionAccess() {
 
 async function validateOdysseyDemoPassword(password) {
     if (!odysseyCredentialsUrl) return true;
+    recordStreamTelemetry('demo_password_validate_start');
 
     const response = await fetch(odysseyCredentialsUrl, {
         method: 'POST',
@@ -2103,9 +2182,11 @@ async function validateOdysseyDemoPassword(password) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
         const message = data?.error || `Demo access failed (${response.status})`;
+        recordStreamTelemetry('demo_password_validate_error', { status: response.status, message });
         throw new Error(message);
     }
 
+    recordStreamTelemetry('demo_password_validate_success', { status: response.status });
     return true;
 }
 
@@ -2118,6 +2199,7 @@ async function fetchOdysseyClientCredentials() {
         throw new Error('Enter the demo password to connect.');
     }
 
+    recordStreamTelemetry('odyssey_credentials_request_start');
     const response = await fetch(odysseyCredentialsUrl, {
         method: 'POST',
         headers: {
@@ -2137,6 +2219,7 @@ async function fetchOdysseyClientCredentials() {
             showOdysseyKeyGate('Demo password expired or was rejected. Enter it again.');
         }
         const message = data?.error || `Credential request failed (${response.status})`;
+        recordStreamTelemetry('odyssey_credentials_request_error', { status: response.status, message });
         throw new Error(message);
     }
 
@@ -2149,6 +2232,10 @@ async function fetchOdysseyClientCredentials() {
         throw new Error('Odyssey credentials helper is unavailable.');
     }
 
+    recordStreamTelemetry('odyssey_credentials_request_success', {
+        expiresIn: Number(credentialsPayload.expires_in || credentialsPayload.expiresIn || 0),
+        imageToVideo: Boolean(credentialsPayload.capabilities?.image_to_video)
+    });
     return window.OdysseyCredentialsFromDict(credentialsPayload);
 }
 
@@ -4468,9 +4555,27 @@ function getCardStatusState(statusText) {
     if (/^streaming\b/.test(normalized)) return 'streaming';
     if (/^replay\b/.test(normalized)) return 'replay';
     if (/^frozen\b/.test(normalized)) return 'frozen';
+    if (/^timed out\b/.test(normalized)) return 'error';
     if (/^retrying\b/.test(normalized)) return 'connecting';
     if (/^connecting\b/.test(normalized)) return 'connecting';
+    if (/^credentials\b/.test(normalized)) return 'connecting';
+    if (/^preparing\b/.test(normalized)) return 'connecting';
+    if (/^prompting\b/.test(normalized)) return 'connecting';
+    if (/^starting\b/.test(normalized)) return 'connecting';
+    if (/^resuming\b/.test(normalized)) return 'connecting';
+    if (/^recovering\b/.test(normalized)) return 'connecting';
+    if (/^applying\b/.test(normalized)) return 'connecting';
     return 'default';
+}
+
+function getCardLifecycleStepIndex(statusText) {
+    const normalized = normalizeCardStatusText(statusText).toLowerCase();
+    if (/^preparing\b|^prompting\b/.test(normalized)) return 0;
+    if (/^credentials\b|^connecting\b|^retrying\b|^resuming\b|^recovering\b/.test(normalized)) return 1;
+    if (/^starting\b/.test(normalized)) return 2;
+    if (/^streaming\b|^applying\b/.test(normalized)) return 3;
+    if (/^replay\b|^frozen\b|^stopped\b|^error\b|^timed out\b/.test(normalized)) return 4;
+    return 0;
 }
 
 function syncCardCenteredLoadingState(cardState, statusText) {
@@ -4479,9 +4584,116 @@ function syncCardCenteredLoadingState(cardState, statusText) {
     if (!loadingOverlayEl) return;
 
     const normalizedStatus = normalizeCardStatusText(statusText);
-    const isConnecting = /^connecting\b/i.test(normalizedStatus) || /^retrying\b/i.test(normalizedStatus);
+    const isConnecting = /^(connecting|retrying|credentials|preparing|prompting|starting|resuming|recovering)\b/i.test(normalizedStatus);
     loadingOverlayEl.classList.toggle('active', isConnecting);
     cardEl?.classList.toggle('is-center-loading', isConnecting);
+}
+
+function updateCardLifecycleUI(cardState, statusText) {
+    if (!cardState?.lifecycleEl) return;
+    const normalizedStatus = normalizeCardStatusText(statusText) || 'Stopped';
+    const statusState = getCardStatusState(normalizedStatus);
+    cardState.lifecycleEl.dataset.statusState = statusState;
+    if (cardState.lifecycleTextEl) {
+        cardState.lifecycleTextEl.textContent = normalizedStatus;
+    }
+
+    const now = Date.now();
+    if (!Array.isArray(cardState.statusHistory)) {
+        cardState.statusHistory = [];
+    }
+    const last = cardState.statusHistory[cardState.statusHistory.length - 1];
+    if (!last || last.status !== normalizedStatus) {
+        cardState.statusHistory.push({ status: normalizedStatus, ts: now });
+        if (cardState.statusHistory.length > CARD_STATUS_HISTORY_LIMIT) {
+            cardState.statusHistory.splice(0, cardState.statusHistory.length - CARD_STATUS_HISTORY_LIMIT);
+        }
+    }
+
+    if (!cardState.lifecycleStepsEl) return;
+    const currentStep = getCardLifecycleStepIndex(normalizedStatus);
+    const labels = ['Prepare', 'Connect', 'Start', 'Live', 'Fallback'];
+    cardState.lifecycleStepsEl.textContent = '';
+    labels.forEach((label, index) => {
+        const stepEl = document.createElement('span');
+        stepEl.className = 'card-lifecycle-step';
+        if (index < currentStep) stepEl.classList.add('is-done');
+        if (index === currentStep) stepEl.classList.add('is-current');
+        stepEl.title = label;
+        stepEl.setAttribute('aria-label', label);
+        cardState.lifecycleStepsEl.appendChild(stepEl);
+    });
+}
+
+function createEmptyCardPromptAudit(seedPrompt = '') {
+    const seed = String(seedPrompt || '').trim();
+    return {
+        rawText: '',
+        appliedText: seed,
+        lastSentPrompt: seed,
+        route: 'idle',
+        modifiers: {
+            location: false,
+            emotion: false,
+            audio: false,
+            asr: false
+        },
+        updatedAt: 0
+    };
+}
+
+function formatPromptAuditValue(value) {
+    return String(value || '').trim() || '--';
+}
+
+function formatPromptAuditModifiers(modifiers = {}) {
+    const active = [];
+    if (modifiers.location) active.push('location');
+    if (modifiers.emotion) active.push('emotion');
+    if (modifiers.audio) active.push('audio');
+    if (modifiers.asr) active.push('ASR alternative');
+    return active.length ? active.join(', ') : 'none';
+}
+
+function syncCardPromptAuditUI(cardState) {
+    if (!cardState?.auditEls) return;
+    const audit = cardState.promptAudit || createEmptyCardPromptAudit(cardState.seedPrompt || cardState.lastAppliedPrompt);
+    const { rawEl, appliedEl, sentEl, routeEl, modifiersEl } = cardState.auditEls;
+    if (rawEl) rawEl.textContent = formatPromptAuditValue(audit.rawText);
+    if (appliedEl) appliedEl.textContent = formatPromptAuditValue(audit.appliedText);
+    if (sentEl) sentEl.textContent = formatPromptAuditValue(audit.lastSentPrompt);
+    if (routeEl) routeEl.textContent = formatPromptAuditValue(audit.route);
+    if (modifiersEl) modifiersEl.textContent = formatPromptAuditModifiers(audit.modifiers);
+}
+
+function updateCardPromptAudit(cardState, patch = {}) {
+    if (!cardState) return;
+    const prev = cardState.promptAudit || createEmptyCardPromptAudit(cardState.seedPrompt || cardState.lastAppliedPrompt);
+    const nextModifiers = Object.prototype.hasOwnProperty.call(patch, 'modifiers')
+        ? {
+            location: false,
+            emotion: false,
+            audio: false,
+            asr: false,
+            ...(patch.modifiers || {})
+        }
+        : { ...prev.modifiers };
+    if ('locationApplied' in patch) nextModifiers.location = !!patch.locationApplied;
+    if ('emotionApplied' in patch) nextModifiers.emotion = !!patch.emotionApplied;
+    if ('audioApplied' in patch) nextModifiers.audio = !!patch.audioApplied;
+    if ('asrApplied' in patch) nextModifiers.asr = !!patch.asrApplied;
+
+    cardState.promptAudit = {
+        ...prev,
+        ...patch,
+        modifiers: nextModifiers,
+        updatedAt: Date.now()
+    };
+    delete cardState.promptAudit.locationApplied;
+    delete cardState.promptAudit.emotionApplied;
+    delete cardState.promptAudit.audioApplied;
+    delete cardState.promptAudit.asrApplied;
+    syncCardPromptAuditUI(cardState);
 }
 
 function setCardStatusText(cardState, value) {
@@ -4498,6 +4710,7 @@ function setCardStatusText(cardState, value) {
     cardState.statusEl.title = statusText;
 
     syncCardCenteredLoadingState(cardState, statusText);
+    updateCardLifecycleUI(cardState, statusText);
 }
 
 function setCardPromptDraft(cardId, text, options = {}) {
@@ -4525,7 +4738,11 @@ async function submitPromptToExistingCard(cardId, rawText) {
     try {
         setGeneratingIndicator(true);
         updateDraftSpeechChipText(cardState, text);
-        await applyPromptToCard(cardId, text);
+        await applyPromptToCard(cardId, text, {
+            rawText: text,
+            route: 'manual-card-edit',
+            modifiers: {}
+        });
         commitDraftChip(cardState, text, { source: 'manual' });
 
         interactionCount++;
@@ -5058,27 +5275,29 @@ function getOrCreateFreezeFrameEl(cardEl) {
 }
 
 function freezeCardFrame(cardEl, videoEl) {
-    if (!cardEl || !videoEl) return;
+    if (!cardEl || !videoEl) return false;
 
     try {
         const width = videoEl.videoWidth || 0;
         const height = videoEl.videoHeight || 0;
-        if (!width || !height) return;
+        if (!width || !height) return false;
 
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
-        if (!ctx) return;
+        if (!ctx) return false;
 
         ctx.drawImage(videoEl, 0, 0, width, height);
         const freezeEl = getOrCreateFreezeFrameEl(cardEl);
-        if (!freezeEl) return;
+        if (!freezeEl) return false;
 
         freezeEl.src = canvas.toDataURL('image/jpeg', 0.9);
         freezeEl.style.display = 'block';
+        return true;
     } catch (error) {
         console.warn('Failed to freeze card frame:', error);
+        return false;
     }
 }
 
@@ -5184,7 +5403,7 @@ function makeCardDraggable(cardEl) {
 
     const dragHandle = cardEl;
     let dragState = null;
-    const nonDraggableSelector = '.video-card-remove, .video-card-chip, .video-card-chip-minus, input, textarea, button, label';
+    const nonDraggableSelector = '.video-card-remove, .video-card-chip, .video-card-chip-minus, .card-prompt-audit, input, textarea, button, label, summary, details';
 
     dragHandle.addEventListener('pointerdown', (event) => {
         if (event.pointerType === 'mouse' && event.button !== 0) return;
@@ -5518,7 +5737,7 @@ async function freezeAndStopSecondaryCard(cardId, options = {}) {
 
     cardState.isFrozen = true;
     freezeCardFrame(cardState.cardEl, freezeSourceVideo);
-    clearCardReplayLoop(cardState, { revokeBlobUrl: true });
+    clearCardReplayLoop(cardState, { revokeBlobUrl: true, immediate: true });
     setCardStatusText(cardState, 'Frozen');
 
     try {
@@ -5579,6 +5798,16 @@ function isOdysseyConcurrentSessionError(error) {
     if (message.includes('status 429')) return true;
     if (message.includes(' 429')) return true;
     return false;
+}
+
+function isOdysseyStreamDurationLimitError(reason, message) {
+    const combined = `${reason || ''} ${message || ''}`.toLowerCase();
+    return (
+        combined.includes('session_timeout') ||
+        combined.includes('credit lease expired') ||
+        combined.includes('stream duration') ||
+        combined.includes('duration limit')
+    );
 }
 
 function delayMs(ms) {
@@ -5721,25 +5950,48 @@ function getOrCreateCardReplayVideoEl(cardState) {
 function clearCardReplayLoop(cardState, options = {}) {
     if (!cardState) return;
     const revokeBlobUrl = options.revokeBlobUrl === true;
+    const immediate = options.immediate === true;
     const replayVideoEl = cardState.replayVideoEl || cardState.displayEl?.querySelector('.video-replay-loop');
     if (replayVideoEl) {
         cardState.replayVideoEl = replayVideoEl;
     }
 
     if (replayVideoEl) {
-        replayVideoEl.pause();
-        replayVideoEl.style.display = 'none';
-        replayVideoEl.removeAttribute('src');
-        try {
-            replayVideoEl.load();
-        } catch (_) {
-            // no-op
+        if (cardState.replayHideTimer) {
+            clearTimeout(cardState.replayHideTimer);
+            cardState.replayHideTimer = null;
+        }
+        replayVideoEl.classList.remove('is-active');
+        const clearVideo = () => {
+            if (replayVideoEl.classList.contains('is-active')) return;
+            replayVideoEl.pause();
+            replayVideoEl.style.display = 'none';
+            replayVideoEl.removeAttribute('src');
+            try {
+                replayVideoEl.load();
+            } catch (_) {
+                // no-op
+            }
+        };
+        if (immediate) {
+            clearVideo();
+        } else {
+            cardState.replayHideTimer = setTimeout(() => {
+                cardState.replayHideTimer = null;
+                clearVideo();
+            }, REPLAY_CROSSFADE_MS);
         }
     }
 
     if (revokeBlobUrl && cardState.replayBlobUrl) {
-        URL.revokeObjectURL(cardState.replayBlobUrl);
+        const previousBlobUrl = cardState.replayBlobUrl;
         cardState.replayBlobUrl = '';
+        const revoke = () => URL.revokeObjectURL(previousBlobUrl);
+        if (immediate) {
+            revoke();
+        } else {
+            setTimeout(revoke, REPLAY_CROSSFADE_MS + 40);
+        }
     }
 
     cardState.replayActive = false;
@@ -5784,7 +6036,7 @@ function activateCardReplayLoop(cardState, replayBlob) {
         return false;
     }
 
-    clearCardReplayLoop(cardState, { revokeBlobUrl: true });
+    clearCardReplayLoop(cardState, { revokeBlobUrl: true, immediate: true });
     clearCardFreezeFrame(cardState.cardEl);
 
     cardState.replayBlobUrl = URL.createObjectURL(replayBlob);
@@ -5794,23 +6046,31 @@ function activateCardReplayLoop(cardState, replayBlob) {
     replayVideoEl.loop = true;
     replayVideoEl.playsInline = true;
     replayVideoEl.style.display = 'block';
+    requestAnimationFrame(() => {
+        replayVideoEl.classList.add('is-active');
+    });
     replayVideoEl.play().catch(() => {
         // Autoplay is best effort; muted + loop still works after user interaction.
     });
 
     cardState.replayActive = true;
     cardState.isFrozen = false;
+    recordStreamTelemetry('replay_activated', { cardId: cardState.id, bytes: replayBlob.size });
     return true;
 }
 
-async function startCardReplayRecorder(cardState, mediaStream) {
+async function startCardReplayRecorder(cardState, mediaStream, options = {}) {
     if (!cardState) return false;
 
+    const preserveActiveReplay = options.preserveActiveReplay === true && cardState.replayActive;
     await stopCardReplayRecorder(cardState, { keepChunks: false });
-    clearCardReplayLoop(cardState, { revokeBlobUrl: true });
+    if (!preserveActiveReplay) {
+        clearCardReplayLoop(cardState, { revokeBlobUrl: true, immediate: true });
+    }
     cardState.replayChunks = [];
     cardState.replaySupported = isReplayRecorderSupported();
     if (!cardState.replaySupported) {
+        recordStreamTelemetry('replay_recorder_unsupported', { cardId: cardState.id });
         return false;
     }
 
@@ -5872,6 +6132,7 @@ async function startCardReplayRecorder(cardState, mediaStream) {
 
 async function demoteCardToReplay(cardState, options = {}) {
     const trackProjectChange = options.trackProjectChange === true;
+    const reason = String(options.reason || 'fallback');
     if (!cardState?.id || !streamCards.has(cardState.id)) {
         return false;
     }
@@ -5880,6 +6141,8 @@ async function demoteCardToReplay(cardState, options = {}) {
     const demotedCardId = cardState.id;
     const freezeSourceVideo = cardState.videoEl;
     let replayActivated = false;
+    const freezeCaptured = freezeCardFrame(cardState.cardEl, freezeSourceVideo);
+    recordStreamTelemetry('card_demote_to_replay', { cardId: demotedCardId, reason });
 
     try {
         await stopCardReplayRecorder(cardState, { keepChunks: true });
@@ -5897,9 +6160,9 @@ async function demoteCardToReplay(cardState, options = {}) {
     }
 
     if (!replayActivated) {
-        clearCardReplayLoop(cardState, { revokeBlobUrl: true });
-        freezeCardFrame(cardState.cardEl, freezeSourceVideo);
-        cardState.isFrozen = true;
+        clearCardReplayLoop(cardState, { revokeBlobUrl: true, immediate: true });
+        cardState.isFrozen = freezeCaptured || freezeCardFrame(cardState.cardEl, freezeSourceVideo);
+        recordStreamTelemetry('replay_fallback_frozen', { cardId: demotedCardId, reason });
     }
 
     try {
@@ -5932,11 +6195,10 @@ async function demoteCardToReplay(cardState, options = {}) {
 
     if (replayActivated) {
         cardState.isFrozen = false;
-        setCardStatusText(cardState, 'Replay');
+        setCardStatusText(cardState, reason === 'concurrent-limit' ? 'Replay - live limit reached' : 'Replay');
     } else {
         cardState.replayActive = false;
-        cardState.isFrozen = true;
-        setCardStatusText(cardState, 'Frozen');
+        setCardStatusText(cardState, cardState.isFrozen ? 'Frozen' : 'Stopped');
     }
 
     if (activeStreamType === 'secondary' && activeStreamCardId === demotedCardId) {
@@ -5964,6 +6226,7 @@ function setSecondaryCardEndedStatus(cardState) {
 function handleSecondaryCardStreamEnded(cardState) {
     if (!cardState?.id || !streamCards.has(cardState.id)) return;
     cardState.isStreaming = false;
+    if (cardState.recoveryInFlight) return;
 
     if (cardState.replayFallbackDisabled) {
         const currentStatus = normalizeCardStatusText(
@@ -5982,11 +6245,62 @@ function handleSecondaryCardStreamEnded(cardState) {
     }
 
     cardState.replayFallbackDisabled = true;
-    void demoteCardToReplay(cardState, { trackProjectChange: true })
+    void demoteCardToReplay(cardState, { trackProjectChange: true, reason: 'stream-ended' })
         .catch((error) => {
             console.warn(`Replay fallback on stream end failed for ${cardState.id}:`, error);
             setSecondaryCardEndedStatus(cardState);
         });
+}
+
+function handleSecondaryCardStreamError(cardState, reason, message) {
+    if (!cardState?.id || !streamCards.has(cardState.id)) return;
+    const normalizedReason = String(reason || 'stream_error');
+    const normalizedMessage = String(message || '').trim();
+    recordStreamTelemetry('card_stream_error', {
+        cardId: cardState.id,
+        reason: normalizedReason,
+        message: normalizedMessage
+    });
+
+    if (isOdysseyStreamDurationLimitError(normalizedReason, normalizedMessage)) {
+        void recoverCardFromStreamDurationLimit(cardState, normalizedReason, normalizedMessage);
+        return;
+    }
+
+    setCardStatusText(cardState, 'Error');
+}
+
+async function recoverCardFromStreamDurationLimit(cardState, reason = 'session_timeout', message = '') {
+    if (!cardState?.id || !streamCards.has(cardState.id)) return false;
+    if (cardState.recoveryInFlight) return false;
+
+    cardState.recoveryInFlight = true;
+    recordStreamTelemetry('card_duration_recovery_start', {
+        cardId: cardState.id,
+        reason,
+        message
+    });
+    setCardStatusText(cardState, 'Timed out');
+
+    try {
+        await demoteCardToReplay(cardState, { trackProjectChange: true, reason: 'duration-limit' });
+        if (!streamCards.has(cardState.id)) return false;
+        setCardStatusText(cardState, cardState.replayActive ? 'Recovering...' : 'Resuming...');
+        await delayMs(500);
+        await restartStreamCard(cardState, { preserveReplayUntilLive: true, reason: 'duration-limit' });
+        recordStreamTelemetry('card_duration_recovery_success', { cardId: cardState.id });
+        return true;
+    } catch (error) {
+        console.warn(`Duration recovery failed for ${cardState.id}:`, error);
+        recordStreamTelemetry('card_duration_recovery_error', {
+            cardId: cardState.id,
+            message: error?.message || String(error || '')
+        });
+        setSecondaryCardEndedStatus(cardState);
+        return false;
+    } finally {
+        cardState.recoveryInFlight = false;
+    }
 }
 
 function getLeastRecentlyInteractedLiveCard(excludeCardId = null) {
@@ -6025,7 +6339,8 @@ async function demoteLeastRecentLiveCardForConcurrentLimit(excludeCardId = null)
     }
 
     console.warn(`Concurrent limit fallback: demoting ${candidate.id} to replay.`);
-    return demoteCardToReplay(candidate, { trackProjectChange: false });
+    setCardStatusText(candidate, 'Replay fallback...');
+    return demoteCardToReplay(candidate, { trackProjectChange: false, reason: 'concurrent-limit' });
 }
 
 async function forceCloseAllOdysseySessions(options = {}) {
@@ -6053,13 +6368,26 @@ async function connectCardClientWithRetry(cardState, apiKey, connectOptions) {
         const client = apiKey ? new window.Odyssey({ apiKey }) : new window.Odyssey();
         cardState.client = client;
         try {
+            setCardStatusText(cardState, apiKey ? 'Connecting...' : 'Credentials...');
+            recordStreamTelemetry('card_connect_attempt', {
+                cardId: cardState.id,
+                attempt,
+                mode: apiKey ? 'local-key' : 'credentials'
+            });
             const credentials = apiKey ? null : await fetchOdysseyClientCredentials();
+            setCardStatusText(cardState, 'Connecting...');
             const mediaStream = credentials
                 ? await client.connectWithCredentials(credentials, connectOptions)
                 : await client.connect(connectOptions);
+            recordStreamTelemetry('card_connect_success', { cardId: cardState.id, attempt });
             return { client, mediaStream };
         } catch (error) {
             lastError = error;
+            recordStreamTelemetry('card_connect_error', {
+                cardId: cardState.id,
+                attempt,
+                message: error?.message || String(error || '')
+            });
             try {
                 client.disconnect();
             } catch (_) {
@@ -6074,6 +6402,7 @@ async function connectCardClientWithRetry(cardState, apiKey, connectOptions) {
             }
 
             console.warn(`Odyssey session limit reached. Retrying connect (${attempt}/${ODYSSEY_CONNECT_MAX_ATTEMPTS})...`);
+            setCardStatusText(cardState, 'Retrying...');
             const demoted = await demoteLeastRecentLiveCardForConcurrentLimit(cardState.id);
             if (!demoted) {
                 console.warn('No demotable live card found; force-closing Odyssey sessions as emergency fallback.');
@@ -6089,13 +6418,24 @@ async function connectCardClientWithRetry(cardState, apiKey, connectOptions) {
         const emergencyClient = apiKey ? new window.Odyssey({ apiKey }) : new window.Odyssey();
         cardState.client = emergencyClient;
         try {
+            setCardStatusText(cardState, apiKey ? 'Connecting...' : 'Credentials...');
+            recordStreamTelemetry('card_connect_emergency_attempt', {
+                cardId: cardState.id,
+                mode: apiKey ? 'local-key' : 'credentials'
+            });
             const credentials = apiKey ? null : await fetchOdysseyClientCredentials();
+            setCardStatusText(cardState, 'Connecting...');
             const mediaStream = credentials
                 ? await emergencyClient.connectWithCredentials(credentials, connectOptions)
                 : await emergencyClient.connect(connectOptions);
+            recordStreamTelemetry('card_connect_emergency_success', { cardId: cardState.id });
             return { client: emergencyClient, mediaStream };
         } catch (error) {
             lastError = error;
+            recordStreamTelemetry('card_connect_emergency_error', {
+                cardId: cardState.id,
+                message: error?.message || String(error || '')
+            });
             try {
                 emergencyClient.disconnect();
             } catch (_) {
@@ -6116,7 +6456,7 @@ async function submitPromptAsNewCard(rawText, options = {}) {
 
     promptSpawnInFlight = true;
     try {
-        await createStreamCardFromPrompt(text, options);
+        return await createStreamCardFromPrompt(text, options);
     } finally {
         promptSpawnInFlight = false;
     }
@@ -6231,6 +6571,30 @@ if (optionThemeToggleEl) {
     });
 }
 
+if (wanderWelcomeCloseBtn) {
+    wanderWelcomeCloseBtn.addEventListener('click', hideWelcomeModal);
+}
+
+if (wanderWelcomeModalEl) {
+    wanderWelcomeModalEl.addEventListener('click', (event) => {
+        if (event.target === wanderWelcomeModalEl) {
+            hideWelcomeModal();
+        }
+    });
+}
+
+if (optionWelcomeReplayBtn) {
+    optionWelcomeReplayBtn.addEventListener('click', () => {
+        showWelcomeModal({ force: true });
+    });
+}
+
+window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && wanderWelcomeModalEl && !wanderWelcomeModalEl.hidden) {
+        hideWelcomeModal();
+    }
+});
+
 // Sense toggles
 senseVoice.addEventListener('change', (e) => {
     speechEnabled = e.target.checked;
@@ -6341,6 +6705,7 @@ async function generatePromptForCard(userText) {
 async function stopAndRemoveStreamCard(cardId) {
     const cardState = streamCards.get(cardId);
     if (!cardState) return;
+    recordStreamTelemetry('card_remove_start', { cardId });
     cardState.replayFallbackDisabled = true;
 
     const layoutRafId = cardChipLayoutRaf.get(cardId);
@@ -6350,7 +6715,7 @@ async function stopAndRemoveStreamCard(cardId) {
     }
 
     await stopCardReplayRecorder(cardState, { keepChunks: false });
-    clearCardReplayLoop(cardState, { revokeBlobUrl: true });
+    clearCardReplayLoop(cardState, { revokeBlobUrl: true, immediate: true });
 
     streamCards.delete(cardId);
     if (activeStreamType === 'secondary' && activeStreamCardId === cardId) {
@@ -6404,6 +6769,7 @@ async function stopAndRemoveStreamCard(cardId) {
     syncStreamCardHighlightState();
     scheduleActiveProjectAutosave();
     syncDynamicBackgroundRefreshLoop();
+    recordStreamTelemetry('card_remove_success', { cardId });
 }
 
 function buildResumePromptForCard(cardState) {
@@ -6421,7 +6787,7 @@ function buildResumePromptForCard(cardState) {
     return `${base}. Continue the same scene and visual style.`;
 }
 
-async function restartStreamCard(cardState) {
+async function restartStreamCard(cardState, options = {}) {
     if (!cardState) {
         throw new Error('Invalid card state');
     }
@@ -6433,13 +6799,16 @@ async function restartStreamCard(cardState) {
     }
 
     const resumePrompt = buildResumePromptForCard(cardState);
+    const preserveReplayUntilLive = options.preserveReplayUntilLive === true && cardState.replayActive;
 
     setCardStatusText(cardState, 'Resuming...');
     cardState.replayFallbackDisabled = true;
 
     await stopCardReplayRecorder(cardState, { keepChunks: false });
-    clearCardReplayLoop(cardState, { revokeBlobUrl: true });
-    clearCardFreezeFrame(cardState.cardEl);
+    if (!preserveReplayUntilLive) {
+        clearCardReplayLoop(cardState, { revokeBlobUrl: true, immediate: true });
+        clearCardFreezeFrame(cardState.cardEl);
+    }
 
     try {
         if (cardState.isStreaming && cardState.client) {
@@ -6469,12 +6838,17 @@ async function restartStreamCard(cardState) {
         onStreamStarted: () => {
             cardState.isStreaming = true;
             cardState.isFrozen = false;
-            cardState.replayActive = false;
+            clearCardReplayLoop(cardState, { revokeBlobUrl: true });
             cardState.replayFallbackDisabled = false;
             setCardStatusText(cardState, 'Streaming');
+            recordStreamTelemetry('card_stream_started', { cardId: cardState.id, mode: 'resume' });
         },
         onStreamEnded: () => {
+            recordStreamTelemetry('card_stream_ended', { cardId: cardState.id, mode: 'resume' });
             handleSecondaryCardStreamEnded(cardState);
+        },
+        onStreamError: (reason, message) => {
+            handleSecondaryCardStreamError(cardState, reason, message);
         },
         onError: (error) => {
             if (isOdysseyConcurrentSessionError(error)) {
@@ -6495,9 +6869,13 @@ async function restartStreamCard(cardState) {
         cardState.videoEl.muted = true;
         cardState.videoEl.volume = 0;
     }
-    clearCardFreezeFrame(cardState.cardEl);
-    await startCardReplayRecorder(cardState, mediaStream);
+    if (!preserveReplayUntilLive) {
+        clearCardFreezeFrame(cardState.cardEl);
+    }
+    await startCardReplayRecorder(cardState, mediaStream, { preserveActiveReplay: preserveReplayUntilLive });
 
+    setCardStatusText(cardState, 'Starting stream...');
+    recordStreamTelemetry('card_start_stream', { cardId: cardState.id, mode: 'resume' });
     await client.startStream({
         ...buildOdysseyStartOptions(resumePrompt, { portrait: false })
     });
@@ -6506,13 +6884,18 @@ async function restartStreamCard(cardState) {
     cardState.isStreaming = true;
     cardState.isFrozen = false;
     cardState.lastAppliedPrompt = resumePrompt;
-    cardState.replayActive = false;
+    clearCardReplayLoop(cardState, { revokeBlobUrl: true });
     cardState.replayFallbackDisabled = false;
+    updateCardPromptAudit(cardState, {
+        appliedText: resumePrompt,
+        lastSentPrompt: resumePrompt,
+        route: options.reason === 'duration-limit' ? 'auto-recovery' : 'resume'
+    });
     markCardInteraction(cardState.id);
     setCardStatusText(cardState, 'Streaming');
 }
 
-async function applyPromptToCard(cardId, prompt) {
+async function applyPromptToCard(cardId, prompt, options = {}) {
     const cardState = streamCards.get(cardId);
     if (!cardState) {
         throw new Error('Target card not found');
@@ -6529,12 +6912,30 @@ async function applyPromptToCard(cardId, prompt) {
     setCardStatusText(cardState, 'Applying...');
     markCardInteraction(cardId);
 
-    await cardState.client.interact({ prompt });
+    recordStreamTelemetry('card_interact_start', { cardId, route: options.route || 'card-edit' });
+    try {
+        await cardState.client.interact({ prompt });
+    } catch (error) {
+        recordStreamTelemetry('card_interact_error', {
+            cardId,
+            route: options.route || 'card-edit',
+            message: error?.message || String(error || '')
+        });
+        throw error;
+    }
     cardState.lastAppliedPrompt = prompt;
     cardState.isStreaming = true;
     cardState.isFrozen = false;
     cardState.replayActive = false;
     cardState.replayFallbackDisabled = false;
+    updateCardPromptAudit(cardState, {
+        rawText: String(options.rawText || cardState.promptAudit?.rawText || '').trim(),
+        appliedText: prompt,
+        lastSentPrompt: prompt,
+        route: String(options.route || 'card-edit'),
+        modifiers: options.modifiers || {}
+    });
+    recordStreamTelemetry('card_interact_success', { cardId, route: options.route || 'card-edit' });
     markCardInteraction(cardId);
     setCardStatusText(cardState, 'Streaming');
     setActiveStream('secondary', cardId);
@@ -6580,6 +6981,38 @@ function createStreamCardShell(options = {}) {
             <div class="finger-cursor"></div>
             <div class="click-marker"></div>
         </div>
+        <div class="card-lifecycle" aria-live="polite">
+            <div class="card-lifecycle-current">
+                <span class="card-lifecycle-dot" aria-hidden="true"></span>
+                <span class="card-lifecycle-text">Preparing...</span>
+            </div>
+            <div class="card-lifecycle-steps" aria-hidden="true"></div>
+        </div>
+        <details class="card-prompt-audit">
+            <summary>Prompt audit</summary>
+            <div class="card-prompt-audit-panel">
+                <div class="card-prompt-audit-row">
+                    <span class="card-prompt-audit-label">Raw</span>
+                    <span class="card-prompt-audit-value" data-audit-field="raw">--</span>
+                </div>
+                <div class="card-prompt-audit-row">
+                    <span class="card-prompt-audit-label">Applied</span>
+                    <span class="card-prompt-audit-value" data-audit-field="applied">--</span>
+                </div>
+                <div class="card-prompt-audit-row">
+                    <span class="card-prompt-audit-label">Sent to Odyssey</span>
+                    <span class="card-prompt-audit-value" data-audit-field="sent">--</span>
+                </div>
+                <div class="card-prompt-audit-row">
+                    <span class="card-prompt-audit-label">Modifiers</span>
+                    <span class="card-prompt-audit-value" data-audit-field="modifiers">none</span>
+                </div>
+                <div class="card-prompt-audit-row">
+                    <span class="card-prompt-audit-label">Route</span>
+                    <span class="card-prompt-audit-value" data-audit-field="route">idle</span>
+                </div>
+            </div>
+        </details>
         <div class="video-card-chip-layer"></div>
     `;
 
@@ -6627,6 +7060,17 @@ function createStreamCardShell(options = {}) {
     const videoEl = cardEl.querySelector('video');
     const chipLayerEl = cardEl.querySelector('.video-card-chip-layer');
     const centerLoadingEl = cardEl.querySelector('.card-center-loading');
+    const lifecycleEl = cardEl.querySelector('.card-lifecycle');
+    const lifecycleTextEl = cardEl.querySelector('.card-lifecycle-text');
+    const lifecycleStepsEl = cardEl.querySelector('.card-lifecycle-steps');
+    const auditEl = cardEl.querySelector('.card-prompt-audit');
+    const auditEls = {
+        rawEl: cardEl.querySelector('[data-audit-field="raw"]'),
+        appliedEl: cardEl.querySelector('[data-audit-field="applied"]'),
+        sentEl: cardEl.querySelector('[data-audit-field="sent"]'),
+        modifiersEl: cardEl.querySelector('[data-audit-field="modifiers"]'),
+        routeEl: cardEl.querySelector('[data-audit-field="route"]')
+    };
     const cardFingerCursorEl = cardEl.querySelector('.finger-cursor');
     const cardClickMarkerEl = cardEl.querySelector('.click-marker');
 
@@ -6646,6 +7090,11 @@ function createStreamCardShell(options = {}) {
         videoEl,
         chipLayerEl,
         centerLoadingEl,
+        lifecycleEl,
+        lifecycleTextEl,
+        lifecycleStepsEl,
+        auditEl,
+        auditEls,
         fingerCursorEl: cardFingerCursorEl,
         clickMarkerEl: cardClickMarkerEl,
         client: null,
@@ -6671,7 +7120,11 @@ function createStreamCardShell(options = {}) {
         replaySupported: isReplayRecorderSupported(),
         replayVideoEl: null,
         replayCaptureStream: null,
-        replayFallbackDisabled: false
+        replayFallbackDisabled: false,
+        replayHideTimer: null,
+        statusHistory: [],
+        recoveryInFlight: false,
+        promptAudit: createEmptyCardPromptAudit(lastAppliedPrompt || seedPrompt)
     };
 
     streamCards.set(cardId, cardState);
@@ -6688,6 +7141,7 @@ function createStreamCardShell(options = {}) {
     }
 
     setCardStatusText(cardState, statusText || 'Stopped');
+    syncCardPromptAuditUI(cardState);
 
     if (Array.isArray(promptChips) && promptChips.length) {
         cardState.promptChips = [];
@@ -6786,7 +7240,7 @@ async function createStreamCardFromPrompt(rawPrompt, options = {}) {
     const isCardAlive = () => streamCards.has(cardId);
     const cleanupDetachedStream = async () => {
         await stopCardReplayRecorder(cardState, { keepChunks: false });
-        clearCardReplayLoop(cardState, { revokeBlobUrl: true });
+        clearCardReplayLoop(cardState, { revokeBlobUrl: true, immediate: true });
 
         try {
             if (cardState.isStreaming && cardState.client) {
@@ -6818,6 +7272,12 @@ async function createStreamCardFromPrompt(rawPrompt, options = {}) {
             : await generatePromptForCard(rawPrompt);
         cardState.seedPrompt = preparedPrompt;
         cardState.lastAppliedPrompt = preparedPrompt;
+        updateCardPromptAudit(cardState, {
+            rawText: String(options.rawText || rawPrompt || '').trim(),
+            appliedText: preparedPrompt,
+            route: String(options.auditRoute || 'new-card'),
+            modifiers: options.auditModifiers || {}
+        });
         if (!isCardAlive()) {
             await cleanupDetachedStream();
             return;
@@ -6832,9 +7292,14 @@ async function createStreamCardFromPrompt(rawPrompt, options = {}) {
                 cardState.replayActive = false;
                 cardState.replayFallbackDisabled = false;
                 setCardStatusText(cardState, 'Streaming');
+                recordStreamTelemetry('card_stream_started', { cardId, mode: 'new-card' });
             },
             onStreamEnded: () => {
+                recordStreamTelemetry('card_stream_ended', { cardId, mode: 'new-card' });
                 handleSecondaryCardStreamEnded(cardState);
+            },
+            onStreamError: (reason, message) => {
+                handleSecondaryCardStreamError(cardState, reason, message);
             },
             onError: (error) => {
                 if (isOdysseyConcurrentSessionError(error)) {
@@ -6860,6 +7325,8 @@ async function createStreamCardFromPrompt(rawPrompt, options = {}) {
         clearCardFreezeFrame(cardEl);
         await startCardReplayRecorder(cardState, mediaStream);
 
+        setCardStatusText(cardState, 'Starting stream...');
+        recordStreamTelemetry('card_start_stream', { cardId, mode: 'new-card' });
         await client.startStream({
             ...buildOdysseyStartOptions(preparedPrompt, { portrait: false })
         });
@@ -6872,6 +7339,12 @@ async function createStreamCardFromPrompt(rawPrompt, options = {}) {
         cardState.isFrozen = false;
         cardState.replayActive = false;
         cardState.replayFallbackDisabled = false;
+        updateCardPromptAudit(cardState, {
+            appliedText: preparedPrompt,
+            lastSentPrompt: preparedPrompt,
+            route: String(options.auditRoute || 'new-card'),
+            modifiers: options.auditModifiers || {}
+        });
         markCardInteraction(cardId);
         maybeAutoSetProjectTitleFromPrompt(preparedPrompt);
         setCardStatusText(cardState, 'Streaming');
@@ -6879,12 +7352,14 @@ async function createStreamCardFromPrompt(rawPrompt, options = {}) {
         scheduleActiveProjectAutosave();
         scheduleDynamicBackgroundRefresh({ immediate: true, delayMs: 320 });
         markInstructionBannerInteractionComplete();
+        return cardState;
     } catch (error) {
         console.error('Failed to create stream card:', error);
         await cleanupDetachedStream();
         if (isCardAlive()) {
             setCardStatusText(cardState, 'Error');
         }
+        return null;
     }
 }
 
@@ -6962,6 +7437,10 @@ async function enterAppFromLanding() {
         interactionCount = 0;
         setInteractionCountDisplay(0);
         resetSpeechMeta();
+        if (promptInput && hasOdysseyCredentialsAccess()) {
+            promptInput.placeholder = 'access ready - speak or type to start wandering...';
+        }
+        showWelcomeModal();
 
         if (handGestureEnabled) {
             startHandGestureTracking().catch((error) => {
@@ -7076,7 +7555,7 @@ async function stopEverything() {
 
     for (const cardState of streamCards.values()) {
         await stopCardReplayRecorder(cardState, { keepChunks: false });
-        clearCardReplayLoop(cardState, { revokeBlobUrl: true });
+        clearCardReplayLoop(cardState, { revokeBlobUrl: true, immediate: true });
     }
     
     isConnected = false;
@@ -8645,7 +9124,14 @@ async function handleCanvasPointedPrompt(spokenText, options = {}) {
     try {
         await submitPromptAsNewCard(appliedPrompt, {
             spawnCanvasPoint,
-            skipPromptRewrite: true
+            skipPromptRewrite: true,
+            rawText: text,
+            auditRoute: 'voice-canvas-create',
+            auditModifiers: {
+                emotion: modifierResult.emotionApplied,
+                audio: modifierResult.audioApplied,
+                asr: !!latestSpeechMeta?.asr?.usedAlternative
+            }
         });
         return {
             appliedPrompt,
@@ -8745,7 +9231,16 @@ async function handleVoiceGroundedPrompt(spokenText, preferredCardId = null, opt
 
         updateDraftSpeechChipText(cardState, finalPrompt);
         setGeneratingIndicator(true);
-        await applyPromptToCard(targetCardId, finalPrompt);
+        await applyPromptToCard(targetCardId, finalPrompt, {
+            rawText,
+            route: 'voice-card-edit',
+            modifiers: {
+                location: locationApplied,
+                emotion: emotionApplied,
+                audio: audioApplied,
+                asr: !!latestSpeechMeta?.asr?.usedAlternative
+            }
+        });
         commitDraftChip(cardState, finalPrompt, { source: 'voice' });
 
         interactionCount++;
@@ -9150,14 +9645,16 @@ async function startFaceDetection() {
 
 // ==================== CLEANUP ====================
 
-window.addEventListener('beforeunload', () => {
+function disconnectAllOdysseyClientsSync(reason = 'cleanup') {
+    recordStreamTelemetry('odyssey_cleanup', { reason, cards: streamCards.size });
     cancelScheduledProjectAutosave();
-    if (activeProjectId) {
-        void captureProjectRuntimeSnapshot(activeProjectId, { freezeStreams: false });
-    }
 
     if (odysseyClient) {
-        odysseyClient.disconnect();
+        try {
+            odysseyClient.disconnect();
+        } catch (_) {
+            // no-op
+        }
     }
 
     streamCards.forEach((cardState) => {
@@ -9167,7 +9664,31 @@ window.addEventListener('beforeunload', () => {
             // no-op
         }
     });
+}
 
+function cleanupForPageExit(reason = 'page-exit') {
+    cancelScheduledProjectAutosave();
+    if (activeProjectId) {
+        void captureProjectRuntimeSnapshot(activeProjectId, { freezeStreams: false });
+    }
+    disconnectAllOdysseyClientsSync(reason);
+}
+
+window.addEventListener('beforeunload', () => {
+    cleanupForPageExit('beforeunload');
+});
+
+window.addEventListener('pagehide', () => {
+    cleanupForPageExit('pagehide');
+});
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && activeProjectId) {
+        void autosaveActiveProjectNow({ freezeStreams: false });
+    }
+});
+
+window.addEventListener('beforeunload', () => {
     if (dynamicBgRefreshTimeoutId) {
         clearTimeout(dynamicBgRefreshTimeoutId);
         dynamicBgRefreshTimeoutId = null;

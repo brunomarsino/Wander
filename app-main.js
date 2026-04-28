@@ -2078,10 +2078,6 @@ function requestOdysseyApiKeyFromUser() {
     return '';
 }
 
-function getOrRequestOdysseyApiKey() {
-    return getOdysseyApiKey() || requestOdysseyApiKeyFromUser();
-}
-
 function hasOdysseyCredentialsAccess() {
     return Boolean(odysseyCredentialsUrl && getDemoAccessPassword());
 }

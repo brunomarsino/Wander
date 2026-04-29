@@ -2960,6 +2960,7 @@ function showGlobalHandCursor(clientX, clientY, mode = 'neutral') {
     cursorEl.style.top = `${clientY}px`;
     cursorEl.classList.add('active');
     cursorEl.classList.remove('clicked');
+    checkHandCursorOverEmotionBar();
 }
 
 function hideGlobalHandCursor() {
@@ -2969,6 +2970,11 @@ function hideGlobalHandCursor() {
     globalHandCursorEl.classList.remove('mode-neutral');
     globalHandCursorEl.classList.remove('mode-pointing');
     globalHandCursorEl.classList.remove('mode-pinching');
+    const bar = document.getElementById('emotionStatusBar');
+    if (bar && emotionBarHandHoverActive) {
+        emotionBarHandHoverActive = false;
+        bar.classList.remove('hand-hover');
+    }
 }
 
 function getViewportPointFromLandmark(landmark) {
@@ -4912,6 +4918,91 @@ function applyEmotionColors(emotion) {
     if (cameraPreview) {
         cameraPreview.style.boxShadow = `0 0 0 2px ${colors.border}`;
         cameraPreview.style.borderRadius = '10px';
+    }
+}
+
+function getAudioToneLabel(features) {
+    const { volume, pitch, energy } = features;
+    if (volume >= 62 || energy >= 66) return { label: 'intense', emoji: '🔥' };
+    if (volume <= 14 && energy <= 22) return { label: 'calm', emoji: '🌊' };
+    if ((pitch === 'high' || pitch === 'very-high') && volume >= 35) return { label: 'bright', emoji: '✨' };
+    if ((pitch === 'low' || pitch === 'very-low') && energy >= 32) return { label: 'deep', emoji: '🌑' };
+    return { label: 'balanced', emoji: '🎙' };
+}
+
+function getEmotionAdjAtConfidence(emotion, confidence) {
+    const adjs = emotionAdjectives[emotion] || [];
+    if (!adjs.length) return null;
+    const pct = confidence * 100;
+    if (pct < 75) return adjs[0];
+    if (pct < 90) return adjs[2];
+    return adjs[4];
+}
+
+function updateEmotionStatusBar(emotion, confidence) {
+    const emojiMap = { happy:'😊', sad:'😢', angry:'😠', fearful:'😨', disgusted:'🤢', surprised:'😲', neutral:'😐' };
+    const pill = document.getElementById('emotionStatusPill');
+    const emojiEl = document.getElementById('emotionStatusEmoji');
+    const labelEl = document.getElementById('emotionStatusLabel');
+    const infoEl = document.getElementById('emotionInfoText');
+
+    if (pill) pill.setAttribute('data-emotion', emotion);
+    if (emojiEl) emojiEl.textContent = emojiMap[emotion] || '😐';
+    if (labelEl) labelEl.textContent = emotion;
+
+    if (infoEl) {
+        const pct = Math.round(confidence * 100);
+        const adj = getEmotionAdjAtConfidence(emotion, confidence);
+        const meetsThreshold = emotion !== 'neutral' && confidence >= 0.55;
+        if (meetsThreshold && adj) {
+            infoEl.textContent = `Your ${emotion} expression (${pct}% confidence) adds a "${adj}" quality to new elements Wander generates. Emotions above 55% confidence influence prompts.`;
+        } else if (emotion === 'neutral') {
+            infoEl.textContent = `No strong expression detected. Emotions above 55% confidence color new elements with a mood adjective.`;
+        } else {
+            infoEl.textContent = `${emotion.charAt(0).toUpperCase() + emotion.slice(1)} detected at ${pct}% — below the 55% threshold needed to influence prompts.`;
+        }
+    }
+}
+
+function updateToneStatusBar(features) {
+    const tone = getAudioToneLabel(features);
+    const toneEmoji = document.querySelector('#toneStatusPill .emotion-status-emoji');
+    const toneLabel = document.getElementById('toneStatusLabel');
+    const toneInfo = document.getElementById('toneInfoText');
+
+    if (toneEmoji) toneEmoji.textContent = tone.emoji;
+    if (toneLabel) toneLabel.textContent = tone.label;
+
+    if (toneInfo) {
+        const { volume, pitch, energy } = features;
+        const descriptions = {
+            intense: `High volume (${Math.round(volume)}%) and energy (${Math.round(energy)}) push Wander toward dramatic, heightened visuals.`,
+            calm: `Quiet voice and low energy guide Wander toward subdued, peaceful atmospheres.`,
+            bright: `High-pitched, energetic speech adds a bright, uplifting quality to generated scenes.`,
+            deep: `Low pitch with moderate energy brings a darker, more serious tone to visuals.`,
+            balanced: `Moderate volume, pitch, and energy — Wander reads this as a neutral vocal tone.`
+        };
+        toneInfo.textContent = descriptions[tone.label] || descriptions.balanced;
+    }
+}
+
+// Hand cursor proximity detection for emotion status bar
+let emotionBarHandHoverActive = false;
+function checkHandCursorOverEmotionBar() {
+    const bar = document.getElementById('emotionStatusBar');
+    if (!bar || !globalHandCursorEl) return;
+    const cursorRect = globalHandCursorEl.getBoundingClientRect();
+    const barRect = bar.getBoundingClientRect();
+    const padding = 24;
+    const over = (
+        cursorRect.left < barRect.right + padding &&
+        cursorRect.right > barRect.left - padding &&
+        cursorRect.top < barRect.bottom + padding &&
+        cursorRect.bottom > barRect.top - padding
+    );
+    if (over !== emotionBarHandHoverActive) {
+        emotionBarHandHoverActive = over;
+        bar.classList.toggle('hand-hover', over);
     }
 }
 
@@ -7837,7 +7928,8 @@ function analyzeAudioContinuously() {
     if (volumeValueEl) volumeValueEl.textContent = volume + '%';
     if (pitchValueEl) pitchValueEl.textContent = pitch;
     if (energyValueEl) energyValueEl.textContent = energy;
-    
+    updateToneStatusBar(currentAudioFeatures);
+
     stopAudioAnalysisLoop();
     audioAnalysisTimeoutId = setTimeout(() => {
         audioAnalysisFrameId = requestAnimationFrame(analyzeAudioContinuously);
@@ -9706,6 +9798,7 @@ async function startFaceDetection() {
                         if (emotionPercentEl) emotionPercentEl.textContent = percent + '%';
                         if (emotionValueEl) emotionValueEl.textContent = `${emoji} ${maxEmotion}`;
                         applyEmotionColors(maxEmotion);
+                        updateEmotionStatusBar(maxEmotion, maxScore);
                     }
                 }
             } catch (err) {

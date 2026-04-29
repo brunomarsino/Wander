@@ -2212,6 +2212,65 @@ body.theme-dark .card-prompt-audit-panel {
     display: none !important;
 }
 
+/* ---- Onboarding Hints ---- */
+
+.onboarding-hints {
+    position: fixed;
+    bottom: 24px;
+    left: 20px;
+    z-index: 148;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+    pointer-events: none;
+}
+
+.onboarding-hint {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 14px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-pill);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08), var(--glass-inset);
+    max-width: 280px;
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.onboarding-hint--hidden {
+    display: none;
+}
+
+.onboarding-hint--dismissing {
+    opacity: 0;
+    transform: translateY(6px);
+    pointer-events: none;
+}
+
+.onboarding-hint-icon {
+    font-size: 15px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.onboarding-hint-text {
+    font-size: 12px;
+    font-weight: 400;
+    color: rgba(0,0,0,0.55);
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+}
+
+body.theme-dark .onboarding-hint-text {
+    color: rgba(255,255,255,0.55);
+}
+
 /* ---- Status Indicator (replaces speech pill) ---- */
 
 .status-indicator {

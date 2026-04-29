@@ -67,15 +67,45 @@
         <div class="onboarding-hints" id="onboardingHints">
             <div class="onboarding-hint" id="hintCreate">
                 <span class="onboarding-hint-icon">&#9757;</span>
-                <span class="onboarding-hint-text">Point &amp; speak to create a stream card</span>
+                <div class="onboarding-hint-body">
+                    <span class="onboarding-hint-text">Point &amp; speak to create a stream card</span>
+                </div>
             </div>
             <div class="onboarding-hint onboarding-hint--hidden" id="hintEdit">
                 <span class="onboarding-hint-icon">&#128247;</span>
-                <span class="onboarding-hint-text">Point at any area of the card to create or edit elements there in real time</span>
+                <div class="onboarding-hint-body">
+                    <span class="onboarding-hint-text">Point at any area of the card to create or edit elements there in real time</span>
+                </div>
             </div>
             <div class="onboarding-hint onboarding-hint--hidden" id="hintMove">
                 <span class="onboarding-hint-icon">&#9995;</span>
-                <span class="onboarding-hint-text">Pinch and hold to move the card around</span>
+                <div class="onboarding-hint-body">
+                    <span class="onboarding-hint-text">Pinch and hold to move the card around</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Emotion + Tone Status Bar -->
+        <div class="emotion-status-bar" id="emotionStatusBar">
+            <div class="emotion-status-pill" id="emotionStatusPill" data-emotion="neutral">
+                <span class="emotion-status-emoji" id="emotionStatusEmoji">😐</span>
+                <span class="emotion-status-label" id="emotionStatusLabel">neutral</span>
+            </div>
+            <div class="emotion-status-pill emotion-status-tone" id="toneStatusPill">
+                <span class="emotion-status-emoji">🎙</span>
+                <span class="emotion-status-label" id="toneStatusLabel">balanced</span>
+            </div>
+            <!-- Info card -->
+            <div class="emotion-info-card" id="emotionInfoCard">
+                <div class="emotion-info-row" id="emotionInfoRow">
+                    <span class="emotion-info-label">Expression</span>
+                    <p class="emotion-info-text" id="emotionInfoText">No expression detected yet. Emotions above 55% confidence add a mood quality to new elements in your scene.</p>
+                </div>
+                <div class="emotion-info-divider"></div>
+                <div class="emotion-info-row">
+                    <span class="emotion-info-label">Voice tone</span>
+                    <p class="emotion-info-text" id="toneInfoText">Speak to start — your pitch and energy shape the atmosphere of generated visuals.</p>
+                </div>
             </div>
         </div>
 

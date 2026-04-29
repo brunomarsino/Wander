@@ -39,65 +39,35 @@
             <div class="video-canvas" id="videoCanvas"></div>
         </main>
 
-        <!-- Bottom Speech Pill (floating, centered) -->
-        <div class="speech-pill-wrapper">
+        <!-- Hidden speech pill (JS compatibility — not shown) -->
+        <div class="speech-pill-wrapper" aria-hidden="true">
             <div class="speech-pill">
-                <button class="senses-button" id="sensesButton" title="Toggle Senses">
-                    <svg class="senses-triangle-icon" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <path d="M10 3.4L4.3 14.8H15.7L10 3.4Z" stroke="#3F4348" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                        <circle cx="10" cy="3.4" r="2.2" fill="#3F4348"/>
-                        <circle cx="4.3" cy="14.8" r="2.2" fill="#3F4348"/>
-                        <circle cx="15.7" cy="14.8" r="2.2" fill="#3F4348"/>
-                    </svg>
-                </button>
+                <button class="senses-button" id="sensesButton" title="Toggle Senses" tabindex="-1"></button>
                 <div class="speech-pill-icon">
                     <span id="speechStatus" class="mic-dot listening"></span>
                 </div>
                 <div class="speech-pill-main">
-                    <input type="text" class="prompt-input" id="promptInput" placeholder="speak or type to start wandering..." />
+                    <input type="text" class="prompt-input" id="promptInput" placeholder="" tabindex="-1" />
                     <div class="speech-feedback" aria-live="polite">
                         <div class="speech-feedback-row">
-                            <span class="speech-feedback-label">Heard</span>
-                            <span id="speechHeardText" class="speech-feedback-text">--</span>
+                            <span id="speechHeardText" class="speech-feedback-text"></span>
                         </div>
                         <div class="speech-feedback-row">
-                            <span class="speech-feedback-label">Applied</span>
-                            <span id="speechAppliedText" class="speech-feedback-text">--</span>
-                            <span id="promptModifierIcons" class="prompt-modifier-icons" aria-label="Active prompt modifiers"></span>
+                            <span id="speechAppliedText" class="speech-feedback-text"></span>
+                            <span id="promptModifierIcons" class="prompt-modifier-icons"></span>
                         </div>
                     </div>
                 </div>
-                <button class="send-button" id="sendButton" title="Send">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M2 10 L18 2 L10 18 L8 11 L2 10Z" fill="currentColor"/>
-                    </svg>
-                </button>
+                <button class="send-button" id="sendButton" tabindex="-1"></button>
             </div>
-            
-            <!-- Senses Dropdown Panel -->
-            <div class="senses-panel" id="sensesPanel" style="display: none;">
-                <div class="senses-panel-header">Senses</div>
+            <div class="senses-panel" id="sensesPanel" style="display:none;"></div>
+        </div>
 
-                <div class="sense-item sense-item-vision">
-                    <label class="sense-icon-btn" data-tooltip="Vision">
-                        <input type="checkbox" id="senseVision" checked />
-                        <span class="sense-icon">&#128065;</span>
-                    </label>
-                </div>
-
-                <div class="sense-item sense-item-voice">
-                    <label class="sense-icon-btn" data-tooltip="Voice">
-                        <input type="checkbox" id="senseVoice" checked />
-                        <span class="sense-icon">&#128068;</span>
-                    </label>
-                </div>
-
-                <div class="sense-item sense-item-gestures">
-                    <label class="sense-icon-btn" data-tooltip="Gestures">
-                        <input type="checkbox" id="senseGestures" checked />
-                        <span class="sense-icon">&#9995;</span>
-                    </label>
-                </div>
+        <!-- Status Indicator (replaces speech pill) -->
+        <div class="status-indicator" id="statusIndicator" aria-live="polite">
+            <div class="status-indicator-inner">
+                <span class="status-indicator-dot" id="statusDot"></span>
+                <span class="status-indicator-text" id="statusText">listening...</span>
             </div>
         </div>
     </div>
@@ -177,7 +147,29 @@
             </section>
 
             <section class="sidebar-pane senses-pane">
-                <h3 class="sidebar-section-title">Senses Status</h3>
+                <h3 class="sidebar-section-title">Senses</h3>
+
+                <!-- Senses toggles (moved from speech pill panel) -->
+                <div class="sense-toggles-row">
+                    <div class="sense-item sense-item-vision">
+                        <label class="sense-icon-btn" data-tooltip="Vision">
+                            <input type="checkbox" id="senseVision" checked />
+                            <span class="sense-icon">&#128065;</span>
+                        </label>
+                    </div>
+                    <div class="sense-item sense-item-voice">
+                        <label class="sense-icon-btn" data-tooltip="Voice">
+                            <input type="checkbox" id="senseVoice" checked />
+                            <span class="sense-icon">&#128068;</span>
+                        </label>
+                    </div>
+                    <div class="sense-item sense-item-gestures">
+                        <label class="sense-icon-btn" data-tooltip="Gestures">
+                            <input type="checkbox" id="senseGestures" checked />
+                            <span class="sense-icon">&#9995;</span>
+                        </label>
+                    </div>
+                </div>
 
                 <div class="audio-status-card">
                     <div class="audio-status-grid">

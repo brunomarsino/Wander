@@ -4885,6 +4885,46 @@ function renderPromptModifierIcons(meta) {
     });
 }
 
+let statusIndicatorTimer = null;
+
+const EMOTION_COLORS = {
+    happy:     { bg: 'rgba(134,239,172,0.55)',  border: '#4ade80' },
+    sad:       { bg: 'rgba(147,197,253,0.55)',  border: '#60a5fa' },
+    angry:     { bg: 'rgba(252,165,165,0.55)',  border: '#f87171' },
+    fearful:   { bg: 'rgba(252,165,165,0.40)',  border: '#fca5a5' },
+    disgusted: { bg: 'rgba(216,180,254,0.45)',  border: '#c084fc' },
+    surprised: { bg: 'rgba(253,230,138,0.55)',  border: '#fbbf24' },
+    neutral:   { bg: 'rgba(253,230,138,0.40)',  border: '#fbbf24' },
+};
+
+function applyEmotionColors(emotion) {
+    const colors = EMOTION_COLORS[emotion] || EMOTION_COLORS.neutral;
+    const statusEl = document.getElementById('statusIndicator');
+    const statusInner = statusEl?.querySelector('.status-indicator-inner');
+    const cameraPreview = document.querySelector('.sense-preview-card .camera-preview');
+
+    if (statusInner) {
+        statusInner.style.background = colors.bg;
+        statusInner.style.borderColor = colors.border;
+    }
+    if (cameraPreview) {
+        cameraPreview.style.boxShadow = `0 0 0 2px ${colors.border}`;
+        cameraPreview.style.borderRadius = '10px';
+    }
+}
+
+function showStatusIndicator(text) {
+    const el = document.getElementById('statusIndicator');
+    const textEl = document.getElementById('statusText');
+    if (!el || !textEl) return;
+    textEl.textContent = text;
+    el.classList.add('is-visible');
+    clearTimeout(statusIndicatorTimer);
+    statusIndicatorTimer = setTimeout(() => {
+        el.classList.remove('is-visible');
+    }, 4000);
+}
+
 function renderSpeechFeedbackMeta() {
     const meta = latestSpeechMeta || createEmptySpeechMeta();
     if (speechHeardTextEl) {
@@ -4892,6 +4932,9 @@ function renderSpeechFeedbackMeta() {
     }
     if (speechAppliedTextEl) {
         speechAppliedTextEl.textContent = meta.appliedText || '--';
+    }
+    if (meta.appliedText && meta.appliedText !== '--') {
+        showStatusIndicator(meta.appliedText);
     }
     renderPromptModifierIcons(meta);
 }
@@ -6503,6 +6546,8 @@ function setSidebarPinnedState(isPinned) {
         debugSidebar.classList.toggle('open', sidebarPinned);
         if (sidebarPinned) {
             debugSidebar.classList.add('visible');
+        } else {
+            debugSidebar.classList.remove('visible');
         }
     }
 
@@ -6515,18 +6560,9 @@ function setSidebarPinnedState(isPinned) {
 }
 
 if (sidebarToggle && debugSidebar) {
-    sidebarToggle.addEventListener('mouseenter', () => {
-        debugSidebar.classList.add('visible');
-    });
-
     sidebarToggle.addEventListener('click', () => {
         if (sidebarPinned) return;
         debugSidebar.classList.toggle('visible');
-    });
-
-    debugSidebar.addEventListener('mouseleave', () => {
-        if (sidebarPinned) return;
-        debugSidebar.classList.remove('visible');
     });
 }
 
@@ -6635,6 +6671,7 @@ senseVision.addEventListener('change', (e) => {
         emotionConfidence = 0;
         if (emotionValueEl) emotionValueEl.textContent = 'neutral';
         if (emotionEmojiEl) emotionEmojiEl.textContent = ':|';
+        applyEmotionColors('neutral');
         if (emotionLabelEl) emotionLabelEl.textContent = 'neutral';
         if (emotionPercentEl) emotionPercentEl.textContent = '0%';
     } else if (isSenseRuntimeActive()) {
@@ -7604,6 +7641,7 @@ async function stopEverything() {
     }
     currentEmotion = 'neutral';
     emotionConfidence = 0;
+    applyEmotionColors('neutral');
     syncStreamCardHighlightState();
     hideFingerCursor();
     hideAllVoicePromptPanels();
@@ -9618,6 +9656,7 @@ async function startFaceDetection() {
                         if (emotionLabelEl) emotionLabelEl.textContent = maxEmotion;
                         if (emotionPercentEl) emotionPercentEl.textContent = percent + '%';
                         if (emotionValueEl) emotionValueEl.textContent = `${emoji} ${maxEmotion}`;
+                        applyEmotionColors(maxEmotion);
                     }
                 }
             } catch (err) {

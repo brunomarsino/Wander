@@ -1452,6 +1452,14 @@ body.theme-dark .video-card.is-selected {
     backdrop-filter: blur(12px) saturate(126%);
     -webkit-backdrop-filter: blur(12px) saturate(126%);
     pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.video-card.is-chips-visible .card-lifecycle {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 body.theme-dark .card-lifecycle {
@@ -1531,8 +1539,17 @@ body.theme-dark .card-lifecycle {
     top: 12px;
     z-index: 43;
     max-width: min(310px, calc(100% - 70px));
-    pointer-events: auto;
+    pointer-events: none;
     color: hsl(220 18% 18%);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.video-card.is-chips-visible .card-prompt-audit {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
 }
 
 .card-prompt-audit summary {
@@ -2222,7 +2239,7 @@ body.theme-dark .card-prompt-audit-panel {
 
 .onboarding-hints {
     position: fixed;
-    bottom: 88px;
+    bottom: 100px;
     left: 20px;
     z-index: 148;
     display: flex;
@@ -2406,7 +2423,7 @@ body.theme-dark .emotion-info-divider { background: rgba(255,255,255,0.08); }
 
 .status-indicator {
     position: fixed;
-    bottom: 20px;
+    bottom: 76px;
     left: 50%;
     transform: translateX(-50%) translateY(8px);
     z-index: 150;

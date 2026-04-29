@@ -3239,6 +3239,7 @@ function renderHandPresenceCursorAtViewport(clientX, clientY, mode = 'neutral') 
     setDotHoverCard(target.hoveredCardId || null);
     if (target.hoveredCardId) {
         hoverPointerCardId = target.hoveredCardId;
+        onPointedAtCard();
     }
 
     fingerCursorPos.x = target.localX;
@@ -3336,6 +3337,7 @@ function beginPinchDrag(clientX, clientY, dragType = 'pinch') {
     };
     pinchReleaseFrames = 0;
     grabReleaseFrames = 0;
+    onPinchedToMove();
 
     cardState.cardEl.classList.add('dragging');
     setActiveStream('secondary', cardId);
@@ -6574,6 +6576,52 @@ if (sidebarPinBtn) {
 
 setSidebarPinnedState(false);
 
+// ==================== ONBOARDING HINTS ====================
+
+const onboarding = {
+    hasCreatedCard: false,
+    hasPointedAtCard: false,
+    hasPinchedToMove: false,
+};
+
+function dismissHint(id) {
+    const el = document.getElementById(id);
+    if (!el || el.classList.contains('onboarding-hint--hidden')) return;
+    el.classList.add('onboarding-hint--dismissing');
+    setTimeout(() => {
+        el.classList.add('onboarding-hint--hidden');
+        el.classList.remove('onboarding-hint--dismissing');
+    }, 320);
+}
+
+function showHint(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('onboarding-hint--hidden', 'onboarding-hint--dismissing');
+}
+
+function onFirstCardCreated() {
+    if (onboarding.hasCreatedCard) return;
+    onboarding.hasCreatedCard = true;
+    dismissHint('hintCreate');
+    setTimeout(() => {
+        if (!onboarding.hasPointedAtCard) showHint('hintEdit');
+        if (!onboarding.hasPinchedToMove) showHint('hintMove');
+    }, 600);
+}
+
+function onPointedAtCard() {
+    if (onboarding.hasPointedAtCard) return;
+    onboarding.hasPointedAtCard = true;
+    dismissHint('hintEdit');
+}
+
+function onPinchedToMove() {
+    if (onboarding.hasPinchedToMove) return;
+    onboarding.hasPinchedToMove = true;
+    dismissHint('hintMove');
+}
+
 if (newProjectTopBtn) {
     newProjectTopBtn.addEventListener('click', async () => {
         await createAndActivateNewProject();
@@ -7168,6 +7216,7 @@ function createStreamCardShell(options = {}) {
     attachDisplayClickHandler(displayEl, cardId);
     attachCardHoverHandlers(cardEl, cardId);
     syncStreamCardHighlightState();
+    onFirstCardCreated();
     scheduleActiveProjectAutosave();
     syncDynamicBackgroundRefreshLoop();
 

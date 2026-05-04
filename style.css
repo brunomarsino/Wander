@@ -3487,3 +3487,21 @@ body.theme-dark .emotion-info-divider { background: rgba(255,255,255,0.08); }
     .speech-feedback { gap: 1px; }
     .speech-feedback-label { display: none; }
 }
+
+/* Credit link */
+.credit-link {
+    position: fixed;
+    bottom: 14px;
+    right: 16px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: hsl(var(--muted-foreground) / 0.55);
+    text-decoration: none;
+    transition: color 0.2s;
+    z-index: 10;
+    pointer-events: auto;
+}
+.credit-link:hover {
+    color: hsl(var(--foreground) / 0.75);
+}

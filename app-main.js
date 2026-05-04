@@ -6665,6 +6665,14 @@ if (sidebarPinBtn) {
     });
 }
 
+document.addEventListener('click', (e) => {
+    if (sidebarPinned) return;
+    if (!debugSidebar || !debugSidebar.classList.contains('visible')) return;
+    if (!debugSidebar.contains(e.target) && e.target !== sidebarToggle) {
+        debugSidebar.classList.remove('visible');
+    }
+});
+
 setSidebarPinnedState(false);
 
 // ==================== ONBOARDING HINTS ====================

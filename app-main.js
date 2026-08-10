@@ -2239,8 +2239,29 @@ async function fetchOdysseyClientCredentials() {
     return window.OdysseyCredentialsFromDict(credentialsPayload);
 }
 
+// The gate markup ships in bring-your-own-key wording. When a credentials
+// endpoint is configured the same card collects a demo password instead, so
+// relabel it rather than keeping two copies of the markup.
+function applyOdysseyKeyGateMode() {
+    if (!odysseyCredentialsUrl) return;
+
+    const kicker = document.getElementById('odysseyKeyGateKicker');
+    const copy = document.getElementById('odysseyKeyGateCopy');
+    const label = document.getElementById('odysseyKeyGateLabel');
+
+    if (kicker) kicker.textContent = 'Private demo';
+    if (copy) {
+        copy.textContent =
+            'Enter the demo password to unlock Odyssey for this browser. The backend keeps the API key private and issues short-lived stream credentials.';
+    }
+    if (label) label.textContent = 'Demo password';
+    if (odysseyKeyInputEl) odysseyKeyInputEl.placeholder = 'Enter password';
+}
+
 function setupOdysseyKeyGate() {
     if (!odysseyKeyGateEl || !odysseyKeyInputEl || !odysseyKeyStartBtn) return;
+
+    applyOdysseyKeyGateMode();
 
     const startWithEnteredKey = async () => {
         const enteredValue = String(odysseyKeyInputEl.value || '').trim();

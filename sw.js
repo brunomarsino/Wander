@@ -1,5 +1,8 @@
-const SHELL_CACHE = 'wander-shell-v9';
-const RUNTIME_CACHE = 'wander-runtime-v9';
+// Bump both on any change to a precached shell asset. config.public.js is in
+// SHELL_ASSETS, so a returning visitor would otherwise keep the previous
+// config (and therefore the previous key mode) until a second load.
+const SHELL_CACHE = 'wander-shell-v10';
+const RUNTIME_CACHE = 'wander-runtime-v10';
 
 const SHELL_ASSETS = [
     './',

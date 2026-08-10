@@ -124,14 +124,17 @@
     <!-- ===== PRIVATE DEMO ODYSSEY CREDENTIALS START ===== -->
     <div class="odyssey-key-gate" id="odysseyKeyGate" hidden>
         <div class="odyssey-key-card">
-            <div class="odyssey-key-kicker">Private demo</div>
+            <!-- Defaults to bring-your-own-key, the mode you get with no
+                 backend configured. setupOdysseyKeyGate() rewrites this copy
+                 when WANDER_API_BASE points at a credentials endpoint. -->
+            <div class="odyssey-key-kicker" id="odysseyKeyGateKicker">Bring your own key</div>
             <h1 class="odyssey-key-title">Connect Odyssey</h1>
-            <p class="odyssey-key-copy">
-                Enter the demo password to unlock Odyssey for this browser. The backend keeps the API key private and issues short-lived stream credentials.
+            <p class="odyssey-key-copy" id="odysseyKeyGateCopy">
+                Paste an Odyssey API key to start streaming. It is kept in this browser's local storage and never sent anywhere except Odyssey.
             </p>
-            <label class="odyssey-key-label" for="odysseyKeyInput">Demo password</label>
+            <label class="odyssey-key-label" for="odysseyKeyInput" id="odysseyKeyGateLabel">Odyssey API key</label>
             <div class="odyssey-key-row">
-                <input id="odysseyKeyInput" class="odyssey-key-input" type="password" autocomplete="off" spellcheck="false" placeholder="Enter password" />
+                <input id="odysseyKeyInput" class="odyssey-key-input" type="password" autocomplete="off" spellcheck="false" placeholder="Paste API key" />
                 <button id="odysseyKeyStartBtn" class="odyssey-key-start" type="button">Start</button>
             </div>
             <div id="odysseyKeyGateError" class="odyssey-key-error" role="status" aria-live="polite"></div>

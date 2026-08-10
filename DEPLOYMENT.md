@@ -58,20 +58,31 @@ https://YOUR_PROJECT_REF.supabase.co/functions/v1
 
 ## Frontend Production Config
 
-Current `config.public.js` production values:
+This whole document is optional. Wander ships in bring-your-own-key mode with
+`WANDER_API_BASE` empty, which needs no backend at all: the start gate asks each
+visitor for an Odyssey key and stores it in their browser. Follow the steps here
+only if you want keys held server-side, which is what you should do before
+putting an instance somewhere public.
+
+Once your functions are deployed, point `config.public.js` at them:
 
 ```js
-window.WANDER_SUPABASE_URL = 'https://hluhgxiqrwapunshvdqk.supabase.co';
-window.WANDER_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_UDO4s_9wzG9BKF9olybQjw_ubML-VwR';
-window.WANDER_API_BASE = 'https://hluhgxiqrwapunshvdqk.supabase.co/functions/v1';
-window.WANDER_OPENAI_PROXY_URL = '';
-window.WANDER_ODYSSEY_CREDENTIALS_URL = '';
-window.OPENAI_API_KEY = '';
-window.ODYSSEY_API_KEY = '';
-window.WANDER_ALLOW_ODYSSEY_KEY_PROMPT = true;
+window.WANDER_API_BASE = 'https://YOUR_PROJECT_REF.supabase.co/functions/v1';
 ```
 
-Do not put real OpenAI or Odyssey keys in `config.public.js`.
+Setting that one value switches the start gate from "paste an API key" to
+"enter a demo password" and routes OpenAI and Odyssey calls through your
+functions. `WANDER_OPENAI_PROXY_URL` and `WANDER_ODYSSEY_CREDENTIALS_URL` are
+derived from it automatically, so set those only to override an individual
+endpoint.
+
+Do not put real OpenAI or Odyssey keys in `config.public.js`. It is committed,
+so anything in it ships to every visitor. Personal keys belong in `config.js`,
+which is gitignored and loads after it.
+
+> The original hosted deployment (Supabase project `hluhgxiqrwapunshvdqk`) has
+> been torn down along with the Odyssey API it served, so those values are gone
+> from `config.public.js`. Substitute your own project ref above.
 
 ## Private Odyssey Demo Flow
 

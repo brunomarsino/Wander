@@ -1,7 +1,12 @@
 {
   "name": "wander",
   "version": "1.0.0",
-  "private": true,
+  "description": "Steer a real-time world model with voice, facial expression, and a pointed hand.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/brunomarsino/Wander.git"
+  },
   "scripts": {
     "dev": "serve . -l 5173"
   },

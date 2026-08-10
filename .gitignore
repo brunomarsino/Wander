@@ -1,6 +1,8 @@
 node_modules/
 .tools/
 .vscode/
+.claude/
+.superpowers/
 npm-debug.log*
 config.js
 .env

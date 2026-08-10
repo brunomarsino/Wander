@@ -1,87 +1,116 @@
-# 🌌 Wander
+# Wander
 
+**Steer a real-time world model with voice, facial expression, and a pointed hand.**
 
+A prompt bar makes creating single-player. One person types, everyone else
+watches. Wander takes the interface off the keyboard and puts it in the room:
+three ambient channels feed a live world model at once, so the scene answers to
+whoever is talking.
 
-**A multi-sensory tool for real-time visual ideation and flow state.**
+Built in four hours for the 2026 Odyssey Hackathon, developed for months after.
 
+> **Status.** Odyssey has retired the API this was built against, so the hosted
+> demo no longer generates. The input layer is the interesting part and it is
+> model-agnostic, so Wander now ships as something you run yourself with your
+> own credentials. See [Swapping the world model](#swapping-the-world-model) if
+> you want to point it at something else.
 
+## The three senses
 
-## 🧭 The Philosophy
+| Channel | How it is read | What it controls |
+|---|---|---|
+| **Voice** | Web Speech API, streaming | The story. Words land mid-sentence, so a scene can turn while you are still talking. |
+| **Expression** | face-api.js, 7 emotions with confidence | The mood. Confidence picks the wording, so a hesitant smile writes *cheerful* into the prompt and a certain one writes *ecstatic*. |
+| **Gesture** | MediaPipe Hands, 21 landmarks | The target. Pointing crops the frame at your fingertip and runs it through a vision model, which is how "make this blue" arrives already naming the object. |
 
+The three never carry equal weight. Voice sets the story, a gesture interrupts
+it, a face only tints what is there. Deciding how they compete was more of the
+design work than any single channel.
 
+## Running it
 
-AI should push creatives and worldbuilders to collaborate between each other, while AI agents work as a third wheel that adds stability and reduces friction, pushing creatives towards a state of flow and wandering.
+No build step and no bundler. It is static files plus two optional Edge
+Functions.
 
+```bash
+git clone https://github.com/brunomarsino/Wander.git
+cd Wander
+cp config.example.js config.js   # keys go here, gitignored
+python3 -m http.server 8000      # or any static server
+```
 
+You can skip the `cp` and still run, since `config.js` is optional. The browser
+just logs a harmless 404 for it on load.
 
-The amount of people require to create great products just keeps getting smaller. The world demands more founders, more ideas… weirder ideas. For this to happen, we need an environment in which people are giving the space to look outside what's possible, what's expected.
+Open `http://localhost:8000`. Wander asks for an Odyssey API key straight away
+and keeps it in `localStorage` for that browser. Paste one, press **Start**, and
+allow microphone and camera access when the browser prompts for them.
 
+Serve it over HTTP rather than opening `index.html` directly. `getUserMedia`
+and the Web Speech API require a secure context, which means `localhost` or
+HTTPS.
 
+### What you need
 
-These world models have a great understanding on our environment, but not so much on ourselves, our intent, our emotions, our patterns, our behaviors. **Wander bridges this gap.**
+| | Required | Without it |
+|---|---|---|
+| **Odyssey API key** | Yes | Nothing generates. |
+| **OpenAI API key** | No | Speech and expression still work. Pointing falls back to raw coordinates, so you have to name what you mean. |
+| **Modern Chrome** | Effectively | The Web Speech API is still the least portable piece. |
 
+### Keys
 
+Two routes, and the mode is decided by whether `WANDER_API_BASE` is set in
+`config.public.js`:
 
-## 🖐️ The Three Senses (Current Multi-Modal Bridge)
+**Bring your own key (default).** `WANDER_API_BASE` empty. The start gate asks
+each visitor for a key and stores it in their browser. No backend. This is the
+right choice for local use and personal forks.
 
+**Server-side keys.** Deploy `supabase/functions` and set `WANDER_API_BASE` to
+your functions URL. The start gate becomes a demo password, keys stay on the
+server, and the browser only ever receives short-lived credentials. See
+[DEPLOYMENT.md](DEPLOYMENT.md). This is the right choice for anything public.
 
+Put personal keys in `config.js`, never `config.public.js`. `config.js` is
+gitignored and loads second, so its values win. A key placed in browser config
+is readable by anyone who can open the page.
 
-To achieve this state of "stable flow," Wander removes the friction of traditional interfaces and replaces them with a more organic connection to **Odyssey's real-time world model API**:
+## Swapping the world model
 
+Odyssey integration is reached through a small surface, so replacing it is a
+contained job rather than a rewrite. The parts to look at in `app-main.js`:
 
+- `getOdysseyApiKey()` and `buildOdysseyStartOptions()` for credentials and
+  session setup
+- The connect and streaming helpers around `ODYSSEY_CONNECT_MAX_ATTEMPTS`
+- `applyLocationHintToPrompt()` for how a pointed-at region is folded into the
+  prompt text
 
-1. **Voice (The Narrative):** Real-time speech recognition allows the user to jam with the AI. The fable evolves as you speak it, mid-stream.
-2. **Vision (The Emotional Palette):** Passive sensing of facial expressions informs the model of the user's emotional state. Your subconscious feelings alter the visual "Cognitive Context" (e.g., joyful expressions trigger vibrant, energetic evolutions).
-3. **Gestures (Spatial Intent):** Point at objects or areas within the generated world. Wander translates spatial coordinates into intent, allowing you to say *"Make this blue"* while pointing at a specific element without having to name it.
+Everything upstream of those is model-agnostic. The senses produce one prompt
+stream; what consumes it is up to you. A model that accepts a text prompt and
+returns streaming frames is the shape that fits with the least work.
 
+## Layout
 
+```
+index.html            markup and the start gate
+app-main.js           senses, prompt composition, model transport, canvas
+style.css             all styling
+config.public.js      committed defaults, no secrets
+config.example.js     template for the gitignored config.js
+supabase/functions/   optional proxies that keep keys off the client
+```
 
-## 🚀 How to Use
+## Credits
 
+Bruno Marsino, system and UI/UX architecture, cognitive philosophy, prompt
+strategy, and fullstack development on later versions. Yves Chen, system
+architecture and Odyssey integration. Renzo Marsino, story guidance. Ahmed
+Hesham, early build support.
 
+Demoed live to Odyssey's CEO and Soleio, both judging. It didn't place.
 
-1. **Initialize:** Enter the private demo password, or use a local-only Odyssey API key during development.
+## License
 
-2. **Awaken Senses:** Click **"Start Wandering"** and allow Microphone and Camera access.
-
-3. **Enter the Flow:** Once the senses are active, let your mind drift. Speak, gesture, and emote. The AI acts as your collaborative partner, reflecting your internal stream of thought into a real-time cinematic world.
-
-
-
-## 🔮 The Future: Deepening the Connection
-
-
-
-Wander is only the beginning of a truly bio-integrated creative environment. Our roadmap includes expanding the "Senses" into the user's internal physiological state:
-
-
-
-* **Biometric Synchronization (Apple Watch/Wearables):** Integrating real-time Heart Rate (HR) and Heart Rate Variability (HRV) data to detect when a user is stressed vs. when they have reached a true **Flow State**. The AI can then adjust the world’s complexity or "calm" to sustain that state.
-* **Spatial Provenance (Location Intelligence):** Automatically tagging "Conceptual Spaces" with physical GPS data. This allows users to revisit ideas based on *where* they were inspired—understanding that a fable written in a bustling city park carries a different "foundational energy" than one born in a quiet forest.
-* **Subconscious Recording:** Saving the metadata of the "Wander" session—not just the video, but the emotional and physiological trajectory—to help founders analyze their own patterns of breakthrough thinking.
-
-
-
-## 🛠️ Technical Implementation
-
-
-
-* **Model:** Odyssey default streaming model, with Max access controlled by the Odyssey account/API key.
-* **Stack:** React, Tailwind CSS, and Framer Motion.
-* **Sensing Engine:** Web Speech API, Vision Sensing, and Coordinate-to-Prompt Translation.
-
-
-
-## 👥 The Team
-
-
-
-* **Bruno Marsino:** System Architecture, **UI/UX Architecture, Cognitive Philosophy \& Prompt Strategy
-* **Yves Chen:** System Architecture \& Odyssey Integration
-* **Renzo Marsino: For providing guidance in the idea structure.**
-* **Ahmed Hesham: For assisting with the first vibe coding exercises.**
-
-
-
-*Built in 4 hours for the 2026 Odyssey Hackathon.*
-
+MIT. See [LICENSE](LICENSE).
